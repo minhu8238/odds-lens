@@ -104,7 +104,9 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .det th:first-child,.det td:first-child{text-align:left;color:var(--mute)}
 .det .pos{color:var(--felt);font-weight:600}.det .neg{color:var(--brick);font-weight:600}
 .det .note{font-size:12px;color:var(--mute);margin-top:4px}
-.flow{display:block;width:100%;height:64px;margin-top:2px}
+.flow{display:block;width:100%;height:96px;margin-top:2px}
+.more{display:block;width:100%;text-align:left;padding:10px 0;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
+.match .extra{display:none}.match.showall .extra{display:grid}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--mute)}
 .legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:4px;vertical-align:middle}
 .few{color:var(--brick);font-weight:600}
@@ -137,7 +139,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 const CFG={"soccer_normal_3":{"t":0.03,"pick":true,"avoid":true,"ll":true,"c":[1.1597,0.0389,-0.12089,-0.00653,0.0583,-0.03735,0.04453,0.04503,0.1929,0.08212]},"soccer_handicap_3":{"t":0.02,"pick":false,"avoid":true,"ll":true,"c":[1.12475,-0.01116,-0.16265,-0.0131,0.00777,0.03304,0.03192,0.02224,0.18602,0.05048]},"soccer_handicap_2":{"t":0.03,"pick":false,"avoid":true,"ll":true,"c":[1.21374,0.34084,-0.04488,0.0736,-0.13677,0.00353,0.26534,0.11444,-0.11705]},"soccer_ou_2":{"t":0.01,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_normal_2":{"t":0.03,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_handicap_2":{"t":0.02,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_ou_2":{"t":0.06,"pick":false,"avoid":true,"ll":true,"c":[0.88123,0.13153,0.25597,-0.0016,0.15663,0.00048,0.11505,0.07858,-0.0785]},"basketball_normal_2":{"t":0.02,"pick":false,"avoid":true,"ll":true,"c":[1.1522,0.07321,-0.11648,0.00385,0.03576,0.00216,-0.48468,-0.00096,0.00062]},"basketball_handicap_2":{"t":0.01,"pick":false,"avoid":false,"ll":true,"c":[0.69344,0.19123,-0.11604,0.00253,0.18673,-0.0002,0.05176,-0.00692,0.00701]},"basketball_ou_2":{"t":0.02,"pick":false,"avoid":false,"ll":true,"c":[-0.01026,-0.0027,0.12443,-4e-05,-0.0008,-0.0,-0.00064,0.0553,-0.05531]},"volleyball_normal_2":{"t":0.04,"pick":false,"avoid":false,"ll":false,"c":[]},"volleyball_handicap_2":{"t":0.06,"pick":false,"avoid":true,"ll":true,"c":[1.29866,0.76942,0.15505,0.02355,-0.03351,0.04792,-0.09765,0.01418,-0.01337]},"volleyball_ou_2":{"t":0.05,"pick":false,"avoid":false,"ll":false,"c":[]}};
 const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
 let F=Object.assign({sp:'',only:false,moved:false,past:false},store.get('lens.f2',{}));
-let DATA=null,AN={},RI=0;const OPEN=new Set();
+let DATA=null,AN={},RI=0;const OPEN=new Set(),OPENM=new Set();
 const sig=x=>1/(1+Math.exp(-x)),norm=a=>{const s=a.reduce((x,y)=>x+y,0);return a.map(x=>x/s)};
 function predict(Fp,I,V,ch,rtp,w){const k=Fp.length,rd=(rtp-.86)*10,p=[];for(let j=0;j<k;j++){const lf=Math.log(Fp[j]/(1-Fp[j])),mv=Math.log(Fp[j]/I[j]),ht=V[j]-Fp[j];const x=[lf,mv,ht,mv*ht,mv*ch,ht*lf,rd*lf];for(let s=0;s<k;s++)x.push(s===j?1:0);let z=0;x.forEach((v,i)=>z+=v*w[i]);p.push(sig(z))}return norm(p)}
 function mkey(sp,ty,k,bn){const S={축구:'soccer',야구:'baseball',농구:'basketball',배구:'volleyball'}[sp];if(!S||/홀짝|승N패|승\d패/.test(ty)||/전반|후반|이닝|쿼터|세트 /.test(bn||''))return null;let m=null;if(/승무패|승패/.test(ty)&&!/핸디/.test(ty))m='normal';else if(/핸디/.test(ty))m='handicap';else if(/언더오버/.test(ty))m='ou';return m?`${S}_${m}_${k}`:null}
@@ -206,20 +208,21 @@ function drawBrief(rows,R,now){
   document.getElementById('brief').innerHTML=h;
 }
 function matchHTML(m){
-  return `<article class="match v-${m.cls} ${m.past?'past':''}"><div class="mhead"><div><div class="lg">${esc(m.lg||'')} ${esc(m.sp)}</div><div class="teams">${esc(m.h)}<span class="vs">${esc(m.a)}</span></div></div><div class="score">${m.score?esc(m.score):''}</div></div>
-  ${m.list.map(x=>rowHTML(x,m)).join('')}</article>`}
-function rowHTML(x,m){
+  return `<article class="match v-${m.cls} ${m.past?'past':''} ${OPENM.has(m.t+m.h)?'showall':''}" data-m="${esc(m.t+m.h)}"><div class="mhead"><div><div class="lg">${esc(m.lg||'')} ${esc(m.sp)}</div><div class="teams">${esc(m.h)}<span class="vs">${esc(m.a)}</span></div></div><div class="score">${m.score?esc(m.score):''}</div></div>
+  ${m.list.filter(x=>!isExtra(x)).map(x=>rowHTML(x,m,'')).join('')}${(()=>{const ex=m.list.filter(isExtra);return ex.length?ex.map(x=>rowHTML(x,m,'extra')).join('')+`<button class="more" data-more>${OPENM.has(m.t+m.h)?'다른 시장 접기':'전반·홀짝 등 다른 시장 '+ex.length+'개'}</button>`:''})()}</article>`}
+const isExtra=x=>!x.a.cls&&x.a.cls!==''&&(/홀짝/.test(x.g.ty)||/전반|후반/.test(x.g.bn||'')||/승N패|승\d패/.test(x.g.ty))||(x.a.cls==='n'&&(/홀짝/.test(x.g.ty)||/전반|후반/.test(x.g.bn||'')));
+function rowHTML(x,m,extra){
   const {g,a}=x,k=a.fo.length;
   const line=(a.isH||a.isO)&&g.ln!==0?`<small>${a.isH&&g.ln>0?'+':''}${g.ln}</small>`:'';
   const vlab=a.cls==='c'||a.cls==='w'?`<span class="verdict ${a.cls}">${a.lab[a.best]} ${a.cls==='c'?'후보':'관심'}</span>`:a.cls==='x'?`<span class="verdict x">${a.lab.filter((_,j)=>a.tags[j]==='x').join('·')} 피하기</span>`:'';
   const cells=a.fo.map((o,j)=>{const d=o-a.io[j];const mv=Math.abs(d)>=.005?`<div class="mv ${d<0?'dn':'up'}">${d<0?'▼':'▲'} ${a.io[j].toFixed(2)}</div>`:'<div class="mv"></div>';
     return `<div class="cell ${a.tags[j]}"><div class="sl">${a.lab[j]}</div><div class="od">${o.toFixed(2)}</div>${mv}<div class="vt">${a.V?'구매 '+Math.round(a.V[j]*100)+'%':''}</div></div>`}).join('');
-  return `<div class="mrow ${OPEN.has(g.s)?'open':''}" role="button" tabindex="0" aria-expanded="${OPEN.has(g.s)}" data-s="${g.s}" style="--k:${k}"><div class="mlab">${marketName(g)}${line}${vlab?'<div>'+vlab+'</div>':''}</div>${cells}<div class="det">${detHTML(x)}</div></div>`}
+  return `<div class="mrow ${extra} ${OPEN.has(g.s)?'open':''}" role="button" tabindex="0" aria-expanded="${OPEN.has(g.s)}" data-s="${g.s}" style="--k:${k}"><div class="mlab">${marketName(g)}${line}${vlab?'<div>'+vlab+'</div>':''}</div>${cells}<div class="det">${detHTML(x)}</div></div>`}
 function flowSVG(g,a){
   const pts=[a.io].concat((g.ch||[]).map(c=>a.three?[c[1],c[2],c[3]]:[c[1],c[3]]));
   if(pts.length<2)return '<div class="note">배당 변경 없이 처음 배당 그대로예요.</div>';
   const P=pts.map(p=>norm(p.map(x=>1/x)));
-  const D=P.map(p=>p.map((v,j)=>v-P[0][j]));const W=300,H=60,pad=5,amp=Math.max(.01,...D.flat().map(Math.abs)),mn=-amp,rng=2*amp;
+  const D=P.map(p=>p.map((v,j)=>v-P[0][j]));const W=300,H=90,pad=8,amp=Math.max(.01,...D.flat().map(Math.abs)),mn=-amp,rng=2*amp;
   const cols=a.three?['var(--felt)','var(--faint)','var(--brick)']:['var(--felt)','var(--brick)'];
   const X=i=>pad+i*(W-2*pad)/(D.length-1),Y=v=>pad+(1-(v-mn)/rng)*(H-2*pad);
   const paths=`<line x1="0" x2="${W}" y1="${H/2}" y2="${H/2}" stroke="var(--line)" stroke-dasharray="3 3"/>`+a.fo.map((_,j)=>{let d='';D.forEach((p,i)=>{d+=(i?` H${X(i).toFixed(1)} V${Y(p[j]).toFixed(1)}`:`M${X(0).toFixed(1)} ${Y(p[j]).toFixed(1)}`)});return `<path d="${d}" fill="none" stroke="${cols[j]}" stroke-width="2" stroke-linejoin="round"/>`}).join('');
@@ -243,7 +246,7 @@ function detHTML(x){
 document.getElementById('rswitch').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;RI=+b.dataset.i;draw()});
 document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;if(b.dataset.sp!==undefined)F.sp=b.dataset.sp;else F[b.dataset.t]=!F[b.dataset.t];store.set('lens.f2',F);draw()});
 const toggle=el=>{if(!el)return;const s=+el.dataset.s;OPEN.has(s)?OPEN.delete(s):OPEN.add(s);el.classList.toggle('open');el.setAttribute('aria-expanded',el.classList.contains('open'))};
-document.getElementById('list').addEventListener('click',e=>{if(e.target.closest('.det'))return;toggle(e.target.closest('.mrow'))});
+document.getElementById('list').addEventListener('click',e=>{if(e.target.closest('.det'))return;const mb=e.target.closest('[data-more]');if(mb){const art=mb.closest('.match'),k=art.dataset.m;OPENM.has(k)?OPENM.delete(k):OPENM.add(k);art.classList.toggle('showall');mb.textContent=art.classList.contains('showall')?'다른 시장 접기':mb.textContent;if(!art.classList.contains('showall'))draw();return}toggle(e.target.closest('.mrow'))});
 document.getElementById('list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('mrow')){e.preventDefault();toggle(e.target)}});
 document.getElementById('brief').addEventListener('click',e=>{const b=e.target.closest('.pick');if(!b)return;const s=+b.dataset.s;OPEN.add(s);F.sp='';F.only=false;F.moved=false;store.set('lens.f2',F);draw();const el=document.querySelector(`.mrow[data-s="${s}"]`);if(el)el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})});
 const fl=document.getElementById('filters');new IntersectionObserver(([e])=>fl.classList.toggle('stuck',e.intersectionRatio<1),{threshold:[1],rootMargin:'-1px 0px 0px 0px'}).observe(fl);
