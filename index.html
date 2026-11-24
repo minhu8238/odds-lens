@@ -111,6 +111,19 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .pc{background:var(--surface);border-radius:var(--r-sm);padding:5px 4px;text-align:center;line-height:1.2}
 .pc span{display:block;font-size:11px;color:var(--mute)}.pc b{font-size:16px;font-weight:800}.pc small{display:block;font-size:11px;color:var(--faint)}
 .pc.c{background:var(--felt-bg)}.pc.c b{color:var(--felt)}.pc.x{background:var(--brick-bg)}.pc.x b{color:var(--brick)}
+.cmp{margin:10px 0 2px}.cbox{background:var(--sunk);border-radius:var(--r-md);margin-top:8px;overflow:hidden}
+.copen{display:block;width:100%;text-align:left;padding:11px 12px;font-size:14px;font-weight:600;color:var(--ink)}.copen small{color:var(--mute);font-weight:400;margin-left:6px}
+.ctabs{display:flex;gap:6px;padding:10px 10px 0}.ctabs button{flex:1;padding:7px 4px;border-radius:999px;font-size:12px;color:var(--ink2);background:var(--surface);border:1px solid var(--line)}
+.ctabs button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.cflt{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:8px 10px 0;font-size:11px;color:var(--mute)}.cflt span{margin-left:4px}.cflt span:first-child{margin-left:0}.cflt button{padding:4px 8px;border-radius:999px;font-size:11px;background:var(--surface);border:1px solid var(--line);color:var(--ink2)}.cflt button[aria-pressed=true]{background:var(--ink2);color:var(--paper);border-color:var(--ink2)}
+.cres{padding:8px 12px 10px}.chead{font-size:14px}.chead small{display:block;color:var(--mute);font-size:11px}
+.tally{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:13px}.tally b{font-weight:700}.tally small{color:var(--mute)}
+.clist{margin-top:8px}.crow{background:var(--surface);border-radius:var(--r-sm);padding:7px 9px;margin-top:6px;font-size:12px}
+.c1{color:var(--ink2);line-height:1.35}.c1 b{color:var(--ink);font-weight:600}.cd{color:var(--mute)}
+.c2{display:grid;grid-template-columns:30px 1fr auto 40px;gap:6px;align-items:center;margin-top:3px}
+.mk{color:var(--mute)}.ov{font-weight:700;font-variant-numeric:tabular-nums;display:flex;flex-wrap:wrap;column-gap:8px}.ov .o{white-space:nowrap}.ov .ch{font-weight:400;color:var(--mute)}.vp{color:var(--faint)}
+.rs{text-align:center;border-radius:5px;padding:1px 0;font-weight:700;font-size:11px}
+.rs.r0,.rs.r02{background:var(--felt-bg);color:var(--felt)}.rs.r1{background:var(--amber-bg);color:var(--amber)}.rs.r2,.rs.r12{background:var(--brick-bg);color:var(--brick)}
 .more{display:block;width:100%;text-align:left;padding:10px 0;border-top:1px solid var(--line);font-size:13px;color:var(--mute)}
 .match .extra{display:none}.match.showall .extra{display:grid}
 .legend{display:flex;gap:12px;font-size:12px;color:var(--mute)}
@@ -137,8 +150,8 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   <section class="brief" id="brief"></section>
   <div id="list"></div>
   <div class="foot">
-    배트맨 공식 데이터를 10분마다 자동으로 받아와요. 시장 줄을 누르면 배당 흐름과 근거가 열려요.<br>
-    <b>자주</b>·<b>드묾</b>은 같은 경기의 일반 최종배당·배당 변경 유무·구매율, 핸디캡 기준점·최종배당·변경 유무·구매율이 모두 비슷했던 과거 경기에서 그 결과가 배당 기대보다 많이(적게) 나왔고, 10경기 이상이며 우연일 확률이 5% 미만이라는 뜻이에요. 좁게는 배당 ±2%p·구매율 ±10%p, 10경기가 안 되면 넓게(±3%p·±15%p)로 봐요. 과거 패턴이지 수익 보장은 아니에요.
+    배트맨 공식 데이터를 10분마다 자동으로 받아와요. 시장 줄을 누르면 배당 흐름이 열려요.<br>
+    <b>비슷한 과거 경기</b>: 같은 경기의 일반+핸디(같은 기준점)를 함께 비교해요. <b>최종 + 변경 + 구매율</b>은 최종 배당 ±0.06, 배당 변경 유무 같음, 구매율 ±10%p(2way ±7%p). <b>초기→최종 무브</b>는 초기·최종 내재확률 ±3%p, 구매율 ±10%p(2way ±7%p). 직전 회차까지의 끝난 경기만 써요.
   </div>
 </div>
 <script>
@@ -160,17 +173,7 @@ function buildPairs(gmTs){
     (PM[ns]=PM[ns]||[]).push(e);
     if(!SM[ns]||SM[ns].n<e.n)SM[ns]={s:x.nrm,n:x.n,lv};SM[hs]={s:x.hdc,n:x.n,lv}}
   return {SM,PM}}
-function applySig(a,se){
-  a.up=a.fo.map(()=>[]);a.dn=a.fo.map(()=>[]);
-  const name=se?(se.lv==='strict'?'짝 좁게':'짝 넓게'):'';
-  if(se&&se.s&&se.s.n>=10&&se.s.pu){const s=se.s;
-    s.pu.forEach((p,j)=>{if(p<0.05)a.up[j].push({name,p,n:s.n,act:s.act[j],exp:s.exp[j]})});
-    s.pd.forEach((p,j)=>{if(p<0.05)a.dn[j].push({name,p,n:s.n,act:s.act[j],exp:s.exp[j]})})}
-  a.mtags=a.tags.slice();a.mcls=a.cls;
-  a.tags=a.fo.map((_,j)=>a.up[j].length?'c':a.dn[j].length?'x':'');
-  a.cls=a.tags.includes('c')?'c':a.tags.includes('x')?'x':'';
-  a.best=a.up.map((u,j)=>[j,u.length?Math.min(...u.map(x=>x.p)):1]).sort((p,q)=>p[1]-q[1])[0][0];
-}
+function applySig(a){a.up=a.fo.map(()=>[]);a.dn=a.fo.map(()=>[]);a.mtags=a.tags.slice();a.mcls=a.cls;a.tags=a.fo.map(()=>'');a.cls='';a.best=0}
 function analyze(g){
   const three=g.o[1]>0,pk=a=>three?a:[a[0],a[2]];
   const fo=pk(g.o);let io=g.i?pk(g.i):fo.slice();if(io.some(x=>!(x>1)))io=fo.slice();
@@ -210,7 +213,7 @@ function draw(){
   document.getElementById('rswitch').innerHTML=DATA.rounds.length>1?DATA.rounds.map((r,i)=>`<button aria-pressed="${i===RI}" data-i="${i}">${r.gmTs%10000}회차 ${SN[r.saleStatus]||''}</button>`).join(''):'';
   document.querySelectorAll('#filters .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sp!==undefined?String(F.sp===b.dataset.sp):String(!!F[b.dataset.t])));
   const PR=buildPairs(R.gmTs);CUR=PR;
-  const rows=R.games.map(g=>{const a=analyze(g),sim=(AN[R.gmTs+':'+g.s]||{}).sim;applySig(a,PR.SM[g.s]);return {g,a,sim}});
+  const rows=R.games.map(g=>{const a=analyze(g),sim=(AN[R.gmTs+':'+g.s]||{}).sim;applySig(a);return {g,a,sim}});
   // 경기(같은 시각·홈·원정)별로 묶기
   const M=new Map();for(const x of rows){const k=x.g.t+'|'+x.g.h+'|'+x.g.a;if(!M.has(k))M.set(k,{t:x.g.t,h:x.g.h,a:x.g.a,lg:x.g.lg,sp:x.g.sp,list:[]});M.get(k).list.push(x)}
   let matches=[...M.values()].map(m=>{m.list.sort((p,q)=>MORDER(p.g)-MORDER(q.g));m.cls=m.list.some(x=>x.a.cls==='c')?'c':m.list.some(x=>x.a.cls==='w')?'w':m.list.some(x=>x.a.cls==='x')?'x':'';m.moved=m.list.some(x=>x.g.c>0);m.past=m.t<=now;const sc=m.list.find(x=>x.g.sc&&x.g.res!=null);m.score=sc?sc.g.sc:'';return m}).sort((p,q)=>p.t-q.t);
@@ -220,41 +223,93 @@ function draw(){
   for(const m of vis){const slot=dayKey(m.t)+' '+hhmm(m.t);if(slot!==lastSlot){h+=`<div class="slot"><b>${hhmm(m.t)}</b><span>${dayKey(m.t)}${m.past?' · 시작함':''}</span></div>`;lastSlot=slot}
     h+=matchHTML(m)}
   document.getElementById('list').innerHTML=h||'<div class="empty">조건에 맞는 경기가 없어요. 위쪽 필터를 바꿔 보세요.</div>';
+  document.querySelectorAll('.cbox').forEach(b=>{if(CMP[b.dataset.key])runCompare(b)});
 }
 function drawBrief(rows,R,now){
   const up=rows.filter(x=>x.g.t>now);
-  const items=[];for(const x of up)x.a.up.forEach((u,j)=>{if(u.length)items.push({x,j,u,p:Math.min(...u.map(v=>v.p))})});
-  items.sort((p,q)=>p.p-q.p);
-  const lows=[];for(const x of up)x.a.dn.forEach((u,j)=>{if(u.length)lows.push({x,j,u,p:Math.min(...u.map(v=>v.p))})});lows.sort((p,q)=>p.p-q.p);
-  const moves=up.filter(x=>x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,6);
-  const why=u=>u.map(v=>`${v.name} ${v.act.toFixed(0)}% (기대 ${v.exp.toFixed(0)}%, ${v.n}경기)`).join('<br>');
-  let h=`<h2>남은 경기: 일반+핸디 짝이 비슷했던 과거 경기</h2><div class="counts"><span><b style="color:var(--felt)">${items.length}</b>자주 나온 결과</span><span><b style="color:var(--brick)">${lows.length}</b>드물게 나온 결과</span><span><b>${up.length}</b>시장</span></div>`;
-  const roi=it=>Math.max(...it.u.map(v=>v.act/100*it.x.a.fo[it.j]-1));
-  items.forEach(it=>it.r=roi(it));
-  const card=({x,j,u,r})=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}${x.g.ln&&(x.a.isH||x.a.isO)?' '+x.g.ln:''}${x.g.c?', 배당 '+x.g.c+'번 변경':', 배당 변동 없음'}</small></span><span class="s"><b style="color:var(--felt)">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>${why(u)}</small><small style="color:${r>=0?'var(--felt)':'var(--mute)'}">과거 기준 수익 ${sgn(r*100)}%</small></span></button>`;
-  const lo=items.filter(it=>it.x.a.fo[it.j]<2).sort((p,q)=>q.r-p.r),hi=items.filter(it=>it.x.a.fo[it.j]>=2).sort((p,q)=>q.r-p.r);
-  h+=`<h3>배당 2.0 이상에서 유의미하게 자주 나온 결과</h3>`+(hi.length?hi.slice(0,8).map(card).join(''):'<div class="none">지금은 없어요. 높은 배당은 과거에도 기대만큼 안 나온 경우가 많아서 드물게 잡혀요.</div>');
-  h+=`<h3>배당 2.0 미만에서 유의미하게 자주 나온 결과</h3>`+(lo.length?lo.slice(0,8).map(card).join(''):'<div class="none">지금은 없어요.</div>');
-  if(lows.length)h+=`<h3>유의미하게 드물게 나온 결과</h3>`+lows.slice(0,6).map(({x,j,u})=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)}</small></span><span class="s"><b style="color:var(--brick)">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>${why(u)}</small></span></button>`).join('');
+  const nm=new Set(up.map(x=>x.g.t+x.g.h)).size,mv=up.filter(x=>x.g.c>0).length;
+  const moves=up.filter(x=>x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,8);
+  let h=`<h2>남은 경기</h2><div class="counts"><span><b>${nm}</b>경기</span><span><b>${up.length}</b>시장</span><span><b>${mv}</b>배당 바뀐 시장</span></div>`;
   h+=`<h3>최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
-    const mv=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
-    return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(dtmMs(x.g.lc))}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)} ${mv}</small></span><span class="s"><small>경기 ${hhmm(x.g.t)}</small></span></button>`}).join(''):'<div class="none">최근 90분 동안 바뀐 배당이 없어요.</div>';
-  h+=`<div class="none" style="font-size:12px;padding-top:10px">기준: 일반 최종배당·변경 유무·구매율과 핸디 기준점·최종배당·변경 유무·구매율이 모두 비슷한 과거 경기 10개 이상, 배당 기대보다 많이(적게) 나온 게 우연일 확률 5% 미만. 시장이 많아 일부는 우연으로도 걸려요.</div>`;
+    const mvs=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
+    return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(dtmMs(x.g.lc))}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)} ${mvs}</small></span><span class="s"><small>경기 ${hhmm(x.g.t)}</small></span></button>`}).join(''):'<div class="none">최근 90분 동안 바뀐 배당이 없어요.</div>';
+  h+=`<div class="none" style="font-size:12px;padding-top:10px">경기 블록의 "비슷한 과거 경기"를 누르면 일반·핸디 배당과 구매율이 비슷했던 과거 경기 목록이 나와요.</div>`;
   document.getElementById('brief').innerHTML=h;
 }
-function pairHTML(m){
-  const nrow=m.list.find(x=>CUR.PM[x.g.s]);if(!nrow)return '';
-  return CUR.PM[nrow.g.s].map(e=>{
-    const hrow=m.list.find(x=>x.g.s===e.hs);if(!hrow)return '';
-    const hl=`${e.ln>0?'+':''}${e.ln}`;
-    if(e.novote)return `<div class="pair"><div class="ph">일반 + 핸디 ${hl} 짝 비교</div><div class="none">구매율 정보가 아직 없어요.</div></div>`;
-    const cell=(s,j,lab)=>{if(!s||!s.n)return '';const d=s.act[j]-s.exp[j];const up=s.n>=10&&s.pu[j]<0.05,dn=s.n>=10&&s.pd[j]<0.05;return `<div class="pc ${up?'c':dn?'x':''}"><span>${lab}</span><b>${s.act[j].toFixed(0)}%</b><small>기대 ${s.exp[j].toFixed(0)}</small></div>`};
-    const line=(s,labs)=>s&&s.n?`<div class="pl" style="--k:${labs.length}">${labs.map((l,j)=>cell(s,j,l)).join('')}</div>`:'';
-    const nl=nrow.a.lab,hlb=hrow.a.lab;
-    return `<div class="pair"><div class="ph">일반 + 핸디 ${hl}이 비슷했던 경기 <b>${e.n}개</b>${e.n<10?' <span class="few">표본 적음</span>':''}<span class="pn">${e.lv==='strict'?'좁게':'넓게'} · 좁게 ${e.sn} / 넓게 ${e.wn}</span></div>${line(e.nrm,nl)}${line(e.hdc,hlb)}</div>`}).join('')}
+// ── 비슷한 과거 경기 찾기 (엑셀 필터를 자동으로)
+// 최종: 같은 기준점, 일반·핸디 최종 배당 각각 ±0.06, 배당 변경 유무 같음, 구매율 ±10%p(2way ±7%p)
+// 무브: 같은 기준점, 일반·핸디 초기·최종 내재확률 각각 ±3%p, 구매율 ±10%p(2way ±7%p)
+const SPE={축구:'soccer',야구:'baseball',농구:'basketball',배구:'volleyball'};const PH={};
+async function fetchText(url){const r=await fetch(url);if(!r.ok)throw new Error(r.status);const b=new Uint8Array(await r.arrayBuffer());
+  if(b[0]===0x1f&&b[1]===0x8b){const s=new Blob([b]).stream().pipeThrough(new DecompressionStream('gzip'));return await new Response(s).text()}
+  return new TextDecoder().decode(b)}
+function parsePair(rd,l){const a=l.split(',');if(a.length!==28)return null;const n=i=>a[i]===''?NaN:+a[i];
+  return {rd,dt:a[0],lg:a[1],h:a[2],a:a[3],sc:a[4],ni:[n(5),n(6),n(7)],nf:[n(8),n(9),n(10)],nch:n(11),nv:[n(12),n(13),n(14)],ln:n(15),hi:[n(16),n(17),n(18)],hf:[n(19),n(20),n(21)],hch:n(22),hv:[n(23),n(24),n(25)],r1:n(26),r2:n(27)}}
+function loadPairs(sp){if(PH[sp])return PH[sp];PH[sp]=(async()=>{const rows=[];
+  const t=await fetchText(`data/history/pair_${sp}.csv.gz`);for(const l of t.split('\n'))if(l){const x=parsePair(0,l);if(x)rows.push(x)}
+  let idx={};try{idx=JSON.parse(await fetchText('data/history_new/index.json?'+Date.now()))}catch(e){}
+  for(const rd of (idx[sp]||[])){try{const t2=await fetchText(`data/history_new/${rd}/pair_${sp}.csv?`+Date.now());for(const l of t2.split('\n'))if(l){const x=parsePair(rd,l);if(x)rows.push(x)}}catch(e){}}
+  return rows})();PH[sp].catch(()=>{delete PH[sp]});return PH[sp]}
+const pk3=(o,three)=>three?o:[o[0],o[2]];
+const nzp=a=>{const inv=a.map(x=>1/x),s=inv.reduce((p,q)=>p+q,0);return inv.map(x=>x/s)};
+const vpct=v=>{if(!v)return null;const s=v.reduce((a,b)=>a+b,0);return s>50?v.map(x=>x/s*100):null};
+function findSimilar(rows,N,H,mode,round,opt){opt=opt||{};const OT=opt.ot??0.06,VW=opt.vw??1,CHG=opt.chg??true;
+  const n3=N.o[1]>0,h3=H.o[1]>0,VT=(n3?10:7)*VW,HVT=(h3?10:7)*VW;
+  const qn={f:pk3(N.o,n3),i:pk3(N.i&&N.i.every((x,j)=>x>1||(!n3&&j===1))?N.i:N.o,n3),m:(N.c||0)>0,v:vpct(N.v)&&pk3(vpct(N.v),n3)};
+  const qh={f:pk3(H.o,h3),i:pk3(H.i&&H.i.every((x,j)=>x>1||(!h3&&j===1))?H.i:H.o,h3),m:(H.c||0)>0,v:vpct(H.v)&&pk3(vpct(H.v),h3)};
+  if(VW&&(!qn.v||!qh.v))return {err:'구매율 정보가 아직 없어요. 구매율 조건을 끄고 찾아보세요.'};
+  const pn={f:nzp(qn.f),i:nzp(qn.i)},ph={f:nzp(qh.f),i:nzp(qh.i)},PT=opt.pt??0.03;
+  const out=[];
+  for(const x of rows){
+    if(x.rd&&x.rd>=round)continue;if(x.ln!==(H.ln||0))continue;
+    if((x.nf[1]>1)!==n3||(x.hf[1]>1)!==h3)continue;
+    const nf=pk3(x.nf,n3),hf=pk3(x.hf,h3),nv=pk3(x.nv,n3),hv=pk3(x.hv,h3);
+    if(VW){if(nv.some(isNaN)||hv.some(isNaN))continue;
+    if(nv.some((v,j)=>Math.abs(v-qn.v[j])>VT)||hv.some((v,j)=>Math.abs(v-qh.v[j])>HVT))continue}
+    if(mode==='fin'){
+      if(nf.some((v,j)=>Math.abs(v-qn.f[j])>OT+1e-9)||hf.some((v,j)=>Math.abs(v-qh.f[j])>OT+1e-9))continue;
+      if(CHG&&((x.nch>0)!==qn.m||(x.hch>0)!==qh.m))continue;
+    }else{
+      const ni=pk3(x.ni,n3),hi=pk3(x.hi,h3);if(ni.some(v=>!(v>1))||hi.some(v=>!(v>1)))continue;
+      const a1=nzp(nf),a2=nzp(ni),b1=nzp(hf),b2=nzp(hi);
+      if(a1.some((v,j)=>Math.abs(v-pn.f[j])>PT)||a2.some((v,j)=>Math.abs(v-pn.i[j])>PT)||b1.some((v,j)=>Math.abs(v-ph.f[j])>PT)||b2.some((v,j)=>Math.abs(v-ph.i[j])>PT))continue;
+    }
+    out.push(x)}
+  out.sort((p,q)=>q.dt<p.dt?-1:1);return {list:out,n3,h3}}
+const CMP={};// key -> {mode, shown}
+function fltHTML(st){return `<div class="cflt">${st.mode==='fin'?`<span>배당</span>${[0.06,0.1,0.15].map(v=>`<button data-k="ot" data-v="${v}" aria-pressed="${(st.ot??0.06)===v}">±${v.toFixed(2)}</button>`).join('')}<span>변경</span><button data-k="chg" data-v="1" aria-pressed="${st.chg!==false}">같음</button><button data-k="chg" data-v="0" aria-pressed="${st.chg===false}">무시</button>`:`<span>확률</span>${[0.02,0.03,0.05].map(v=>`<button data-k="pt" data-v="${v}" aria-pressed="${(st.pt??0.03)===v}">±${v*100}%p</button>`).join('')}`}<span>구매율</span>${[[1,'기본'],[1.5,'넓게'],[0,'끔']].map(([v,l])=>`<button data-k="vw" data-v="${v}" aria-pressed="${(st.vw??1)===v}">${l}</button>`).join('')}</div>`}
+function compareShellOne(cb){const key=cb.dataset.key,st=CMP[key];return `<div class="cbox" data-key="${key}" data-sp="${cb.dataset.sp}"><div class="ctabs"><button data-mode="fin" aria-pressed="${st.mode==='fin'}">최종 + 변경 + 구매율</button><button data-mode="move" aria-pressed="${st.mode==='move'}">초기→최종 무브</button></div>${fltHTML(st)}<div class="cres"><div class="none">찾는 중…</div></div></div>`}
+function compareShell(m){
+  const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)return '';
+  const hs=m.list.filter(x=>marketName(x.g)==='핸디캡');if(!hs.length)return '';
+  return `<div class="cmp">${hs.map(h=>{const key=nrow.g.s+':'+h.g.s;const st=CMP[key];const ln=`${h.g.ln>0?'+':''}${h.g.ln}`;
+    return `<div class="cbox" data-key="${key}" data-sp="${esc(m.sp)}">${st?`<div class="ctabs"><button data-mode="fin" aria-pressed="${st.mode==='fin'}">최종 + 변경 + 구매율</button><button data-mode="move" aria-pressed="${st.mode==='move'}">초기→최종 무브</button></div>${fltHTML(st)}<div class="cres"><div class="none">찾는 중…</div></div>`:`<button class="copen" data-open>비슷한 과거 경기 찾기 <small>일반 + 핸디 ${ln}</small></button>`}</div>`}).join('')}</div>`}
+async function runCompare(box){
+  const key=box.dataset.key,[ns,hs]=key.split(':').map(Number),st=CMP[key];const R=DATA.rounds[RI];
+  const N=R.games.find(g=>g.s===ns),H=R.games.find(g=>g.s===hs),el=box.querySelector('.cres');
+  try{const rows=await loadPairs(SPE[box.dataset.sp]);const res=findSimilar(rows,N,H,st.mode,R.gmTs,st);
+    if(res.err){el.innerHTML=`<div class="none">${res.err}</div>`;return}
+    el.innerHTML=listHTML(res,N,H,st)}catch(e){el.innerHTML=`<div class="none">과거 데이터를 불러오지 못했어요. 다시 눌러 주세요.</div>`}}
+function listHTML(res,N,H,st){
+  const {list,n3,h3}=res,n=list.length;const NL=n3?['승','무','패']:['승','패'],HL=h3?['핸승','핸무','핸패']:['핸승','핸패'];
+  const idx=(r,three)=>three?r:(r===2?1:0);
+  const tally=(f,labs,three)=>{const c=labs.map(()=>0);list.forEach(x=>c[idx(f(x),three)]++);return labs.map((l,j)=>`<span><b>${l}</b> ${c[j]}${n?` <small>${Math.round(c[j]/n*100)}%</small>`:''}</span>`).join('')};
+  const vtxt=(st.vw??1)?`구매율 ±${(n3?10:7)*(st.vw??1)}%p`:'구매율 무시';const crit=st.mode==='fin'?`최종 배당 ±${(st.ot??0.06).toFixed(2)}, ${st.chg===false?'배당 변경 무시':`배당 변경 ${(N.c||0)>0?'있음':'없음'}·${(H.c||0)>0?'있음':'없음'}`}, ${vtxt}`:`초기·최종 내재확률 ±${(st.pt??0.03)*100}%p, ${vtxt}`;
+  let h=`<div class="chead"><b>${n}경기</b> <small>${crit}, 직전 회차까지</small></div>`;
+  if(!n)return h+'<div class="none">조건에 맞는 과거 경기가 없어요.</div>';
+  h+=`<div class="tally">${tally(x=>x.r1,NL,n3)}</div><div class="tally">${tally(x=>x.r2,HL,h3)}</div>`;
+  const od=(f,i,three)=>pk3(f,three).map((v,j)=>{const iv=pk3(i,three)[j];return `<span class="o">${Math.abs(v-iv)>=0.005&&iv>1?`<span class="ch">${iv.toFixed(2)}→</span>`:''}${v.toFixed(2)}</span>`}).join('');
+  const vv=(v,three)=>pk3(v,three).map(x=>Math.round(x)).join('/');
+  const show=list.slice(0,st.shown);
+  h+=`<div class="clist">${show.map(x=>{const d=x.dt;const date=`${d.slice(2,4)}.${d.slice(4,6)}.${d.slice(6,8)}`;
+    return `<div class="crow"><div class="c1"><span class="cd">${date}</span> ${esc(x.lg)} <b>${esc(x.h)}</b> ${esc(x.sc)} <b>${esc(x.a)}</b></div>
+    <div class="c2"><span class="mk">일반</span><span class="ov">${od(x.nf,x.ni,n3)}</span><span class="vp">${vv(x.nv,n3)}</span><span class="rs r${idx(x.r1,n3)}${n3?'':'2'}">${NL[idx(x.r1,n3)]}</span></div>
+    <div class="c2"><span class="mk">핸디</span><span class="ov">${od(x.hf,x.hi,h3)}</span><span class="vp">${vv(x.hv,h3)}</span><span class="rs r${idx(x.r2,h3)}${h3?'':'2'}">${HL[idx(x.r2,h3)]}</span></div></div>`}).join('')}</div>`;
+  if(n>st.shown)h+=`<button class="copen" data-more-list>${Math.min(50,n-st.shown)}경기 더 보기 (남은 ${n-st.shown})</button>`;
+  return h}
 function matchHTML(m){
-  return `<article class="match v-${m.cls} ${m.past?'past':''} ${OPENM.has(m.t+m.h)?'showall':''}" data-m="${esc(m.t+m.h)}"><div class="mhead"><div><div class="lg">${esc(m.lg||'')} ${esc(m.sp)}</div><div class="teams">${esc(m.h)}<span class="vs">${esc(m.a)}</span></div></div><div class="score">${m.score?esc(m.score):''}</div></div>${pairHTML(m)}
+  return `<article class="match v-${m.cls} ${m.past?'past':''} ${OPENM.has(m.t+m.h)?'showall':''}" data-m="${esc(m.t+m.h)}"><div class="mhead"><div><div class="lg">${esc(m.lg||'')} ${esc(m.sp)}</div><div class="teams">${esc(m.h)}<span class="vs">${esc(m.a)}</span></div></div><div class="score">${m.score?esc(m.score):''}</div></div>${compareShell(m)}
   ${m.list.filter(x=>!isExtra(x)).map(x=>rowHTML(x,m,'')).join('')}${(()=>{const ex=m.list.filter(isExtra);return ex.length?ex.map(x=>rowHTML(x,m,'extra')).join('')+`<button class="more" data-more>${OPENM.has(m.t+m.h)?'다른 시장 접기':'전반·홀짝 등 다른 시장 '+ex.length+'개'}</button>`:''})()}</article>`}
 const isExtra=x=>!x.a.cls&&x.a.cls!==''&&(/홀짝/.test(x.g.ty)||/전반|후반/.test(x.g.bn||'')||/승N패|승\d패/.test(x.g.ty))||(x.a.cls==='n'&&(/홀짝/.test(x.g.ty)||/전반|후반/.test(x.g.bn||'')));
 function rowHTML(x,m,extra){
@@ -292,7 +347,15 @@ function detHTML(x){
 document.getElementById('rswitch').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;RI=+b.dataset.i;draw()});
 document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;if(b.dataset.sp!==undefined)F.sp=b.dataset.sp;else F[b.dataset.t]=!F[b.dataset.t];store.set('lens.f2',F);draw()});
 const toggle=el=>{if(!el)return;const s=+el.dataset.s;OPEN.has(s)?OPEN.delete(s):OPEN.add(s);el.classList.toggle('open');el.setAttribute('aria-expanded',el.classList.contains('open'))};
-document.getElementById('list').addEventListener('click',e=>{if(e.target.closest('.det'))return;const mb=e.target.closest('[data-more]');if(mb){const art=mb.closest('.match'),k=art.dataset.m;OPENM.has(k)?OPENM.delete(k):OPENM.add(k);art.classList.toggle('showall');mb.textContent=art.classList.contains('showall')?'다른 시장 접기':mb.textContent;if(!art.classList.contains('showall'))draw();return}toggle(e.target.closest('.mrow'))});
+document.getElementById('list').addEventListener('click',e=>{
+  const cb=e.target.closest('.cbox');
+  if(cb){const key=cb.dataset.key;
+    if(e.target.closest('[data-open]')){CMP[key]={mode:'fin',shown:30};cb.outerHTML=compareShellOne(cb);const nb=document.querySelector(`.cbox[data-key="${key}"]`);runCompare(nb);return}
+    const mb=e.target.closest('[data-mode]');if(mb){CMP[key].mode=mb.dataset.mode;CMP[key].shown=30;cb.outerHTML=compareShellOne(cb);runCompare(document.querySelector(`.cbox[data-key="${key}"]`));return}
+    const fb=e.target.closest('.cflt [data-k]');if(fb){const st=CMP[key];st[fb.dataset.k]=fb.dataset.k==='chg'?fb.dataset.v==='1':+fb.dataset.v;st.shown=30;cb.outerHTML=compareShellOne(cb);runCompare(document.querySelector(`.cbox[data-key="${key}"]`));return}
+    if(e.target.closest('[data-more-list]')){CMP[key].shown+=50;runCompare(cb);return}
+    return}
+  if(e.target.closest('.det'))return;const mb=e.target.closest('[data-more]');if(mb){const art=mb.closest('.match'),k=art.dataset.m;OPENM.has(k)?OPENM.delete(k):OPENM.add(k);art.classList.toggle('showall');mb.textContent=art.classList.contains('showall')?'다른 시장 접기':mb.textContent;if(!art.classList.contains('showall'))draw();return}toggle(e.target.closest('.mrow'))});
 document.getElementById('list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('mrow')){e.preventDefault();toggle(e.target)}});
 document.getElementById('brief').addEventListener('click',e=>{const b=e.target.closest('.pick');if(!b)return;const s=+b.dataset.s;OPEN.add(s);F.sp='';F.only=false;F.moved=false;store.set('lens.f2',F);draw();const el=document.querySelector(`.mrow[data-s="${s}"]`);if(el)el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})});
 const fl=document.getElementById('filters');new IntersectionObserver(([e])=>fl.classList.toggle('stuck',e.intersectionRatio<1),{threshold:[1],rootMargin:'-1px 0px 0px 0px'}).observe(fl);

@@ -97,8 +97,11 @@ async function post(p, body) {
       for (const [m, H] of list) {
         if (m !== 'handicap') continue;
         const id = `${r.gmTs}:P:${N.s}:${H.s}`; if (seen.has(id)) continue; seen.add(id);
-        const sp = SPK[N.sp]; const kst = new Date(N.t + 9 * 3600e3), dt = kst.toISOString().slice(0, 10).replace(/-/g, '');
-        const row = [dt, N.o[0], N.o[1] || 0, N.o[2], N.c || 0, ...pct(N.v), H.ln, H.o[0], H.o[1] || 0, H.o[2], H.c || 0, ...pct(H.v), RES[N.res], RES[H.res]];
+        const sp = SPK[N.sp];         const kd = new Date(N.t + 9 * 3600e3).toISOString(), dtm = kd.slice(0, 10).replace(/-/g, '') + kd.slice(11, 16).replace(':', '');
+        const cl = x => String(x == null ? '' : x).replace(/,/g, ' ');
+        const ini = g => g.i && g.i.every((x, j) => x > 1 || (j === 1 && !(g.o[1] > 0))) ? g.i : g.o;
+        const row = [dtm, cl(N.lg), cl(N.h), cl(N.a), cl(N.sc), ini(N)[0], N.o[1] > 0 ? ini(N)[1] : 0, ini(N)[2], N.o[0], N.o[1] || 0, N.o[2], N.c || 0, ...pct(N.v),
+          H.ln, ini(H)[0], H.o[1] > 0 ? ini(H)[1] : 0, ini(H)[2], H.o[0], H.o[1] || 0, H.o[2], H.c || 0, ...pct(H.v), RES[N.res], RES[H.res]];
         const rdDir = path.join(newDir, String(r.gmTs)); fs.mkdirSync(rdDir, { recursive: true });
         fs.appendFileSync(path.join(rdDir, `pair_${sp}.csv`), row.join(',') + '\n'); appended++;
       }
