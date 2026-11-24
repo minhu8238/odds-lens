@@ -58,7 +58,7 @@ async function post(p, body) {
     if (added) fs.writeFileSync(f, JSON.stringify(H));
     console.log(`${r.gmTs} ${r.saleStatus} 경기 ${r.games.length}, 기록 추가 ${added}`);
   }
-  // 끝난 경기를 과거 데이터(history_new)에 자동 추가: 날짜,최종배당k,초기배당k,구매율k,변경횟수,결과칸
+  // 끝난 경기를 과거 데이터(history_new)에 자동 추가: 날짜,최종배당k,초기배당k,구매율k,변경횟수,기준점,결과칸
   const { marketKey } = require('./model.js');
   const newDir = path.join(dataDir, 'history_new');
   fs.mkdirSync(newDir, { recursive: true });
@@ -76,7 +76,7 @@ async function post(p, body) {
     if (!key || ri < 0) continue;
     const kst = new Date(g.t + 9 * 3600e3), dt = kst.toISOString().slice(0, 10).replace(/-/g, '');
     const o = pk(g.o), i = g.i ? pk(g.i) : o, v = g.v ? pk(g.v) : null, vs = v ? v.reduce((a, b) => a + b, 0) : 0;
-    const row = [dt, ...o.map(x => x.toFixed(2)), ...i.map(x => x > 1 ? x.toFixed(2) : ''), ...(vs > 50 ? v.map(x => (x / vs * 100).toFixed(1)) : o.map(() => '')), g.c || 0, ri];
+    const row = [dt, ...o.map(x => x.toFixed(2)), ...i.map(x => x > 1 ? x.toFixed(2) : ''), ...(vs > 50 ? v.map(x => (x / vs * 100).toFixed(1)) : o.map(() => '')), g.c || 0, g.ln || 0, ri];
     fs.appendFileSync(path.join(newDir, key + '.csv'), row.join(',') + '\n');
     appended++;
   }

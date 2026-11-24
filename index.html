@@ -40,6 +40,7 @@ header{position:sticky;top:0;z-index:3;background:rgba(14,16,19,.97);padding:12p
 .pos{color:var(--good)}.neg{color:var(--bad)}
 .empty{text-align:center;color:var(--mut);padding:40px 0}
 .auto{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px}.ah{font-weight:800;font-size:14px}.as{font-size:12px;color:var(--mut);margin:10px 0 4px}.al{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #1f232a;font-size:13px;cursor:pointer}.al .tm2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.al>span:last-child{flex:none}
+.simh{margin-top:10px;font-weight:700;color:var(--tx)}.sb{margin-top:6px;padding-top:6px;border-top:1px dashed #262a31}.st{font-size:12px}.sd{font-size:11px;color:var(--mut);font-weight:400}
 .foot{color:var(--mut);font-size:11px;margin-top:18px;line-height:1.6}
 </style>
 </head>
@@ -102,9 +103,15 @@ function draw(){
   document.getElementById('list').innerHTML=vis.length?vis.map(({g,a})=>card(g,a,now,R.gmTs)).join(''):'<div class="empty">조건에 맞는 경기가 없어요.</div>';
 }
 function simOf(gmTs,g){const x=AN[gmTs+':'+g.s];return x&&x.sim}
-function simTxt(sm,a){if(!sm)return '';if(!sm.act)return `<div style="margin-top:8px">과거 비슷한 배당 0경기</div>`;const few=sm.n<30?` <b style="color:var(--bad)">· 표본 적음, 우연일 가능성 큼</b>`:'';
-  const ok=j=>sm.dA&&sm.dB&&sm.nA>=10&&sm.nB>=10&&Math.sign(sm.dA[j])===Math.sign(sm.dB[j])&&Math.abs(sm.act[j]-sm.exp[j])>=1;
-  return `<div style="margin-top:8px">과거 비슷한 배당 <b style="color:var(--tx)">${sm.n.toLocaleString()}경기</b> (최종 배당 확률 ±1%p, ~2022 ${sm.nA} · 2023~ ${sm.nB})${few}</div><table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>실제</td>${sm.act.map(x=>`<td>${x.toFixed(1)}%</td>`).join('')}</tr><tr><td>배당 기대</td>${sm.exp.map(x=>`<td>${x.toFixed(1)}%</td>`).join('')}</tr><tr><td>차이</td>${sm.act.map((x,j)=>{const d=x-sm.exp[j];return `<td class="${ok(j)?(d>0?'pos':'neg'):''}">${d>0?'+':''}${d.toFixed(1)}${ok(j)?'*':''}</td>`}).join('')}</tr></table><div style="font-size:11px;color:var(--mut)">${a.lab.some((_,j)=>ok(j))?'* 두 기간(~2022, 2023~) 모두 같은 방향. ':''}참고용이며 판정은 모델 기준이에요.</div>`}
+function simTxt(sm,a){if(!sm)return '';
+  const blk=(t,desc,x)=>{if(!x)return `<div class="sb"><div class="st">${t} <span class="sd">${desc}</span></div><div class="sd">구매율 정보 없음</div></div>`;
+    if(!x.n)return `<div class="sb"><div class="st">${t} <span class="sd">${desc}</span></div><div class="sd">비슷한 경기 0개</div></div>`;
+    const ok=j=>x.dA&&x.dB&&x.nA>=10&&x.nB>=10&&Math.sign(x.dA[j])===Math.sign(x.dB[j])&&Math.abs(x.act[j]-x.exp[j])>=1;
+    const few=x.n<30?` <b style="color:var(--bad)">표본 적음</b>`:'';
+    return `<div class="sb"><div class="st">${t} <b style="color:var(--tx)">${x.n.toLocaleString()}경기</b>${few} <span class="sd">${desc} · ~2022 ${x.nA} / 2023~ ${x.nB}</span></div>
+    <table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>실제</td>${x.act.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>배당 기대</td>${x.exp.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>차이</td>${x.act.map((v,j)=>{const d=v-x.exp[j];return `<td class="${ok(j)?(d>0?'pos':'neg'):''}">${d>0?'+':''}${d.toFixed(1)}${ok(j)?'*':''}</td>`}).join('')}</tr></table></div>`};
+  const k=a.fo.length,t=k===3?'2':'1.5',vt=k===3?'10':'7';
+  return `<div class="simh">과거 비슷한 경기</div>${blk('① 최종만','최종 배당 확률 ±1%p',sm.fin)}${blk('② ATLAS',`초기·최종 ±${t}%p · 움직임 방향 · 변경 여부 일치`,sm.atlas)}${blk('③ ATLAS+구매율',`②에 구매율 ±${vt}%p`,sm.atlasV)}<div style="font-size:11px;color:var(--mut)">같은 시장·같은 기준점만 비교. * 두 기간(~2022, 2023~) 모두 같은 방향. 참고용이며 판정은 모델 기준이에요.</div>`}
 function autoPanel(rows,R,now){
   const up=rows.filter(x=>x.g.t>now);
   const picks=up.filter(x=>x.a.cls==='c'||x.a.cls==='w').sort((p,q)=>p.g.t-q.g.t);
@@ -113,7 +120,7 @@ function autoPanel(rows,R,now){
   const line=(x,extra)=>{const j=x.a.tags.findIndex(t=>t==='c'||t==='w');return `<div class="al" data-s="${x.g.s}"><span class="tm2">${hm(x.g.t).split(' ')[1]} ${x.g.h} vs ${x.g.a}</span><span>${extra}</span></div>`};
   let h='<div class="auto"><div class="ah">자동 분석 · '+(R.gmTs%10000)+'회차</div>';
   h+=`<div class="as">추천 후보 ${picks.length?'':'<span style="color:var(--mut)">· 지금은 없음</span>'}</div>`;
-  h+=picks.map(x=>{const j=x.a.tags.findIndex(t=>t==='c'||t==='w');const sm=simOf(R.gmTs,x.g);const s2=sm&&sm.act?` · 과거${sm.n<30?'(적음)':''} ${sm.act[j]>sm.exp[j]?'+':''}${(sm.act[j]-sm.exp[j]).toFixed(1)}`:'';return line(x,`<b style="color:${x.a.cls==='c'?'var(--acc)':'var(--tx)'}">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b> <span class="pos">+${x.a.E[j].toFixed(1)}</span>${s2}`)}).join('');
+  h+=picks.map(x=>{const j=x.a.tags.findIndex(t=>t==='c'||t==='w');const sm=simOf(R.gmTs,x.g);const s2=(()=>{if(!sm)return '';const f=x=>x&&x.n?`${x.act[j]-x.exp[j]>0?'+':''}${(x.act[j]-x.exp[j]).toFixed(1)}(${x.n})`:'–';return ` · 과거 ${f(sm.fin)} / ATLAS ${f(sm.atlas)}`})();return line(x,`<b style="color:${x.a.cls==='c'?'var(--acc)':'var(--tx)'}">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b> <span class="pos">+${x.a.E[j].toFixed(1)}</span>${s2}`)}).join('');
   h+=`<div class="as">최근 90분 배당 변동 ${moves.length?'':'<span style="color:var(--mut)">· 없음</span>'}</div>`;
   h+=moves.map(x=>{const mv=x.a.fo.map((o,j)=>{const last=x.g.ch[x.g.ch.length-1];const prev=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const pi=prev?(x.a.three?[prev[1],prev[2],prev[3]]:[prev[1],prev[3]]):x.a.io;const d=o-pi[j];return Math.abs(d)>=0.005?`${x.a.lab[j]} ${pi[j].toFixed(2)}→<b class="${d<0?'dn':'up'}">${o.toFixed(2)}</b>`:''}).filter(Boolean).join(' ');return line(x,`<span style="color:var(--mut)">${dtm(x.g.lc).split(' ')[1]}</span> ${mv}`)}).join('');
   return h+'</div>'}
