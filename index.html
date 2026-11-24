@@ -206,7 +206,7 @@ async function load(){
 
 function draw(){
   const R=DATA.rounds[RI],now=Date.now();
-  const SN={SaleIng:'판매 중',SaleBefore:'판매 전',SaleComplete:'판매 마감'};
+  const SN={SaleIng:'판매 중',SaleProgress:'판매 중',SaleBefore:'판매 전',SaleComplete:'판매 마감'};
   document.getElementById('rtitle').innerHTML=`${R.gmTs%10000}<small>회차</small>`;
   const stale=now-DATA.updated>45*60000;
   document.getElementById('rmeta').innerHTML=`<b>${SN[R.saleStatus]||''}</b><br><span class="${stale?'stale':''}">${ago(DATA.updated)} 갱신</span>`;
