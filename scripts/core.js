@@ -42,4 +42,4 @@ function shape(r, gmTs, saleStatus) {
   });
   return { gmTs, saleStatus, saleStart: cl.saleStartDate || null, saleEnd: cl.saleEndDate || null, games };
 }
-if (typeof module !== 'undefined') module.exports = { buildSnapshot };
+if (typeof module !== 'undefined') module.exports = { buildSnapshot, shape };

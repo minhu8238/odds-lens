@@ -1,7 +1,7 @@
 // GitHub Actions에서 실행: 배트맨 데이터 → data/latest.json + data/hist/<회차>.json
 const fs = require('fs');
 const path = require('path');
-const { buildSnapshot } = require('./core.js');
+const { buildSnapshot, shape } = require('./core.js');
 
 const BASE = 'https://www.betman.co.kr';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -65,22 +65,43 @@ async function post(p, body) {
   const seenF = path.join(newDir, 'seen.txt');
   const seen = new Set(fs.existsSync(seenF) ? fs.readFileSync(seenF, 'utf8').split('\n').filter(Boolean) : []);
   const RES = { '0': 0, '1': 1, '2': 2 };
+  // 기존 과거 데이터(history/*.csv.gz)는 2026-11-14 23:00 KST 경기까지 들어 있음 → 그 이후 경기만 추가
+  const HIST_END = Date.UTC(2026, 10, 14, 14, 0);
   let appended = 0;
-  for (const r of snap.rounds) for (const g of r.games) {
-    const id = `${r.gmTs}:${g.s}`;
-    if (seen.has(id) || !(g.res in RES) || g.t > snap.updated) continue;
-    const three = g.o[1] > 0, pk = a => three ? a : [a[0], a[2]];
-    const key = marketKey(g.sp, g.ty, three ? 3 : 2);
-    let ri = RES[g.res]; if (!three) ri = ri === 2 ? 1 : ri === 0 ? 0 : -1;
-    seen.add(id);
-    if (!key || ri < 0) continue;
-    const kst = new Date(g.t + 9 * 3600e3), dt = kst.toISOString().slice(0, 10).replace(/-/g, '');
-    const o = pk(g.o), i = g.i ? pk(g.i) : o, v = g.v ? pk(g.v) : null, vs = v ? v.reduce((a, b) => a + b, 0) : 0;
-    const row = [dt, ...o.map(x => x.toFixed(2)), ...i.map(x => x > 1 ? x.toFixed(2) : ''), ...(vs > 50 ? v.map(x => (x / vs * 100).toFixed(1)) : o.map(() => '')), g.c || 0, g.ln || 0, ri];
-    fs.appendFileSync(path.join(newDir, key + '.csv'), row.join(',') + '\n');
-    appended++;
+  const addRound = r => {
+    for (const g of r.games) {
+      const id = `${r.gmTs}:${g.s}`;
+      if (seen.has(id) || !(g.res in RES) || g.t > snap.updated) continue;
+      seen.add(id);
+      if (g.t <= HIST_END) continue;
+      const three = g.o[1] > 0, pk = a => three ? a : [a[0], a[2]];
+      const key = marketKey(g.sp, g.ty, three ? 3 : 2);
+      let ri = RES[g.res]; if (!three) ri = ri === 2 ? 1 : ri === 0 ? 0 : -1;
+      if (!key || ri < 0) continue;
+      const kst = new Date(g.t + 9 * 3600e3), dt = kst.toISOString().slice(0, 10).replace(/-/g, '');
+      const o = pk(g.o), i = g.i ? pk(g.i) : o, v = g.v ? pk(g.v) : null, vs = v ? v.reduce((a, b) => a + b, 0) : 0;
+      const row = [dt, ...o.map(x => x.toFixed(2)), ...i.map(x => x > 1 ? x.toFixed(2) : ''), ...(vs > 50 ? v.map(x => (x / vs * 100).toFixed(1)) : o.map(() => '')), g.c || 0, g.ln || 0, ri];
+      fs.appendFileSync(path.join(newDir, key + '.csv'), row.join(',') + '\n');
+      appended++;
+    }
+  };
+  for (const r of snap.rounds) addRound(r);
+  // 빠진 회차 메우기: 기존 데이터 마지막 회차(135)부터 현재 회차 직전까지, 결과가 다 나온 회차는 완료 표시
+  const bfF = path.join(newDir, 'backfill.txt');
+  let done = fs.existsSync(bfF) ? +fs.readFileSync(bfF, 'utf8').trim() : 260134;
+  const cur = Math.min(...snap.rounds.map(r => r.gmTs));
+  for (let ts = done + 1, steps = 0; ts < cur && steps < 6; ts++, steps++) {
+    const yy = Math.floor(ts / 10000);
+    const raw = await post('/buyPsblGame/gameInfoInq.do', { gmId: 'G101', gmTs: String(ts), gameYear: String(2000 + yy), _sbmInfo: { debugMode: 'false' } });
+    if (!raw || !raw.compSchedules) { if (ts % 10000 > 0) done = ts; continue }
+    const r = shape(raw, ts, raw.currentLottery && raw.currentLottery.saleStatus);
+    addRound(r);
+    const pending = r.games.filter(g => !(g.res in RES) && g.t > snap.updated - 3 * 86400e3).length;
+    console.log(`메우기 ${ts}: 경기 ${r.games.length}, 결과 대기 ${pending}`);
+    if (pending === 0 && done === ts - 1) done = ts;
   }
+  fs.writeFileSync(bfF, String(done) + '\n');
   fs.writeFileSync(seenF, [...seen].join('\n') + '\n');
-  console.log('끝난 경기 과거 데이터에 추가', appended);
+  console.log('끝난 경기 과거 데이터에 추가', appended, '/ 메우기 완료 회차', done);
   console.log('요청 수', calls);
 })().catch(e => { console.error('실패:', e.message); process.exit(1) });
