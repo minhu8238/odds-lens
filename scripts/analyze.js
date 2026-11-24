@@ -70,6 +70,37 @@ function similar(key, q, round) {
   }
   return { fin: stat(fin, k), atlas: stat(atlas, k), atlasV: q.V ? stat(atlasV, k) : null };
 }
+// ── 일반+핸디캡 짝 비교: 일반 최종배당·변경유무·구매율 + 핸디 기준점·최종배당·변경유무·구매율이 모두 비슷한 과거 경기
+const pcache = {};
+function pairHistory(sp) {
+  if (pcache[sp]) return pcache[sp];
+  const lines = [];
+  const gz = path.join(DATA, 'history', `pair_${sp}.csv.gz`);
+  if (fs.existsSync(gz)) for (const l of zlib.gunzipSync(fs.readFileSync(gz)).toString('utf8').split('\n')) lines.push([0, l]);
+  const nd = path.join(DATA, 'history_new');
+  if (fs.existsSync(nd)) for (const rd of fs.readdirSync(nd)) { const f = path.join(nd, rd, `pair_${sp}.csv`); if (/^\d+$/.test(rd) && fs.existsSync(f)) for (const l of fs.readFileSync(f, 'utf8').split('\n')) lines.push([+rd, l]) }
+  const rows = [];
+  const side = (o, v) => { const k = o[1] > 1 ? 3 : 2, oo = k === 3 ? o : [o[0], o[2]]; if (oo.some(x => !(x > 1))) return null; const inv = oo.map(x => 1 / x), s = inv.reduce((p, q) => p + q, 0); const vv = k === 3 ? v : [v[0], v[2]]; const vs = vv.reduce((p, q) => p + (q || 0), 0); return { k, F: inv.map(x => x / s), V: vv.some(x => isNaN(x)) || vs < 50 ? null : vv.map(x => x / vs) } };
+  for (const [rd, ln] of lines) {
+    if (!ln) continue; const a = ln.split(','); if (a.length !== 18) continue; const n = a.map(Number);
+    const N = side([n[1], n[2], n[3]], [n[5], n[6], n[7]]), H = side([n[9], n[10], n[11]], [n[13], n[14], n[15]]); if (!N || !H) continue;
+    const ri = (r, k) => k === 3 ? r : (r === 2 ? 1 : r === 0 ? 0 : -1); const r1 = ri(n[16], N.k), r2 = ri(n[17], H.k); if (r1 < 0 || r2 < 0) continue;
+    rows.push({ rd, y: +a[0].slice(0, 4), N, H, m1: n[4] > 0, m2: n[12] > 0, ln: n[8], r1, r2 });
+  }
+  return pcache[sp] = rows;
+}
+const LEVELS = { strict: [0.02, 0.10], wide: [0.03, 0.15] };
+function pairSimilar(sp, q, round) {
+  const rows = pairHistory(sp), out = {};
+  const within = (a, b, t) => a.every((x, j) => Math.abs(x - b[j]) <= t);
+  for (const [lv, [tol, vt]] of Object.entries(LEVELS)) {
+    const sel = rows.filter(x => x.rd < round && x.ln === q.ln && x.N.k === q.N.k && x.H.k === q.H.k && x.m1 === q.m1 && x.m2 === q.m2
+      && within(x.N.F, q.N.F, tol) && within(x.H.F, q.H.F, tol) && x.N.V && x.H.V && q.N.V && q.H.V && within(x.N.V, q.N.V, vt) && within(x.H.V, q.H.V, vt));
+    out[lv] = { n: sel.length, nrm: stat(sel.map(x => ({ y: x.y, r: x.r1, F: x.N.F })), q.N.k), hdc: stat(sel.map(x => ({ y: x.y, r: x.r2, F: x.H.F })), q.H.k) };
+  }
+  return out;
+}
+const SPK = { 축구: 'soccer', 야구: 'baseball', 농구: 'basketball', 배구: 'volleyball' };
 const snap = JSON.parse(fs.readFileSync(path.join(DATA, 'latest.json'), 'utf8'));
 const out = { updated: snap.updated, games: {} };
 let cnt = 0;
@@ -80,6 +111,20 @@ for (const r of snap.rounds) for (const g of r.games) {
   const R = x => x && x.map(v => Math.round(v * 1000) / 10);
   out.games[`${r.gmTs}:${g.s}`] = { key: j.key, cls: j.cls, tags: j.tags, F: R(j.F), P: R(j.P), E: j.E && j.E.map(v => Math.round(v * 10) / 10), V: R(j.V), rtp: Math.round(j.rtp * 1000) / 10, sim };
   cnt++;
+}
+out.pairs = {};
+for (const r of snap.rounds) {
+  const byMatch = {};
+  for (const g of r.games) { const j = judge(g); if (!j.key) continue; const m = j.key.split('_')[1]; if (m !== 'normal' && m !== 'handicap') continue; (byMatch[g.t + '|' + g.h + '|' + g.a] = byMatch[g.t + '|' + g.h + '|' + g.a] || []).push([m, g, j]) }
+  for (const list of Object.values(byMatch)) {
+    const n = list.find(x => x[0] === 'normal'); if (!n) continue;
+    for (const [m, g, j] of list) {
+      if (m !== 'handicap') continue;
+      const q = { ln: g.ln || 0, m1: (n[1].c || 0) > 0, m2: (g.c || 0) > 0, N: { k: n[2].k, F: n[2].F, V: n[2].V }, H: { k: j.k, F: j.F, V: j.V } };
+      if (!q.N.V || !q.H.V) { out.pairs[`${r.gmTs}:${n[1].s}:${g.s}`] = { ln: q.ln, novote: true }; continue }
+      out.pairs[`${r.gmTs}:${n[1].s}:${g.s}`] = Object.assign({ ln: q.ln }, pairSimilar(SPK[g.sp], q, r.gmTs));
+    }
+  }
 }
 fs.writeFileSync(path.join(DATA, 'analysis.json'), JSON.stringify(out));
 console.log('분석 완료', cnt, '경기, 히스토리', Object.entries(cache).map(([k, v]) => `${k}:${v.rows.length}`).join(' '));

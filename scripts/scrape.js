@@ -86,7 +86,25 @@ async function post(p, body) {
       appended++;
     }
   };
-  for (const r of snap.rounds) addRound(r);
+  // 일반+핸디캡 짝 데이터: 같은 경기의 일반(전체) 시장과 핸디캡 시장이 모두 끝나면 한 줄로 저장
+  const SPK = { 축구: 'soccer', 야구: 'baseball', 농구: 'basketball', 배구: 'volleyball' };
+  const pct = v => { const s = v ? v.reduce((a, b) => a + b, 0) : 0; return s > 50 ? v.map(x => x ? (x / s * 100).toFixed(1) : (x === 0 ? '0' : '')) : ['', '', ''] };
+  const addPairs = r => {
+    const byMatch = {};
+    for (const g of r.games) { if (!(g.res in RES) || g.t > snap.updated || g.t <= HIST_END || g.bn === undefined) continue; const k = marketKey(g.sp, g.ty, g.o[1] > 0 ? 3 : 2, g.bn); if (!k) continue; const m = k.split('_')[1]; if (m !== 'normal' && m !== 'handicap') continue; (byMatch[g.t + '|' + g.h + '|' + g.a] = byMatch[g.t + '|' + g.h + '|' + g.a] || []).push([m, g]) }
+    for (const list of Object.values(byMatch)) {
+      const n = list.find(x => x[0] === 'normal'); if (!n) continue; const N = n[1];
+      for (const [m, H] of list) {
+        if (m !== 'handicap') continue;
+        const id = `${r.gmTs}:P:${N.s}:${H.s}`; if (seen.has(id)) continue; seen.add(id);
+        const sp = SPK[N.sp]; const kst = new Date(N.t + 9 * 3600e3), dt = kst.toISOString().slice(0, 10).replace(/-/g, '');
+        const row = [dt, N.o[0], N.o[1] || 0, N.o[2], N.c || 0, ...pct(N.v), H.ln, H.o[0], H.o[1] || 0, H.o[2], H.c || 0, ...pct(H.v), RES[N.res], RES[H.res]];
+        const rdDir = path.join(newDir, String(r.gmTs)); fs.mkdirSync(rdDir, { recursive: true });
+        fs.appendFileSync(path.join(rdDir, `pair_${sp}.csv`), row.join(',') + '\n'); appended++;
+      }
+    }
+  };
+  for (const r of snap.rounds) { addRound(r); addPairs(r) }
   // 빠진 회차 메우기: 기존 데이터 마지막 회차(135)부터 현재 회차 직전까지, 결과가 다 나온 회차는 완료 표시
   const bfF = path.join(newDir, 'backfill.txt');
   let done = fs.existsSync(bfF) ? +fs.readFileSync(bfF, 'utf8').trim() : 260134;
@@ -96,7 +114,7 @@ async function post(p, body) {
     const raw = await post('/buyPsblGame/gameInfoInq.do', { gmId: 'G101', gmTs: String(ts), gameYear: String(2000 + yy), _sbmInfo: { debugMode: 'false' } });
     if (!raw || !raw.compSchedules) { if (ts % 10000 > 0) done = ts; continue }
     const r = shape(raw, ts, raw.currentLottery && raw.currentLottery.saleStatus);
-    addRound(r);
+    addRound(r); addPairs(r);
     const pending = r.games.filter(g => !(g.res in RES) && g.t > snap.updated - 3 * 86400e3).length;
     console.log(`메우기 ${ts}: 경기 ${r.games.length}, 결과 대기 ${pending}`);
     if (pending === 0 && done === ts - 1) done = ts;
