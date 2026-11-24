@@ -34,6 +34,8 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .rmeta b{color:var(--ink);font-weight:600}
 .rmeta .stale{color:var(--brick)}
 .rswitch{display:flex;gap:6px;margin-top:14px}
+.actions{display:flex;gap:8px;margin-top:12px}.act{flex:1;text-align:center;padding:9px 0;border-radius:var(--r-md);font-size:14px;font-weight:600;background:var(--surface);border:1px solid var(--line);color:var(--ink);text-decoration:none}
+.act:active{opacity:.7}.actnote{font-size:12px;color:var(--mute);margin-top:6px;min-height:0}
 .rswitch button{padding:6px 12px;border-radius:999px;font-size:13px;color:var(--mute);border:1px solid var(--line)}
 .rswitch button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
 
@@ -141,6 +143,8 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="brand">ODDS LENS</div>
     <div class="round"><div class="rtitle" id="rtitle">—</div><div class="rmeta" id="rmeta">불러오는 중</div></div>
     <div class="rswitch" id="rswitch"></div>
+    <div class="actions"><button class="act" id="btnReload">새로고침</button><a class="act" id="btnRun" href="https://github.com/minhu8238/odds-lens/actions/workflows/scrape.yml" target="_blank" rel="noopener">배트맨에서 지금 받기</a></div>
+    <div class="actnote" id="actnote"></div>
   </div>
   <div class="filters" id="filters">
     <button class="chip" data-sp="">전체</button><button class="chip" data-sp="축구">축구</button><button class="chip" data-sp="농구">농구</button><button class="chip" data-sp="야구">야구</button><button class="chip" data-sp="배구">배구</button>
@@ -391,6 +395,9 @@ document.getElementById('list').addEventListener('click',e=>{
 document.getElementById('list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('mrow')){e.preventDefault();toggle(e.target)}});
 document.getElementById('brief').addEventListener('click',e=>{const b=e.target.closest('.pick');if(!b)return;const s=+b.dataset.s;OPEN.add(s);F.sp='';F.only=false;F.moved=false;store.set('lens.f2',F);draw();const el=document.querySelector(`.mrow[data-s="${s}"]`);if(el)el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})});
 const fl=document.getElementById('filters');new IntersectionObserver(([e])=>fl.classList.toggle('stuck',e.intersectionRatio<1),{threshold:[1],rootMargin:'-1px 0px 0px 0px'}).observe(fl);
+document.getElementById('btnReload').onclick=async e=>{const b=e.target;b.textContent='불러오는 중…';const before=DATA&&DATA.updated;await load();b.textContent='새로고침';
+  document.getElementById('actnote').textContent=DATA&&DATA.updated!==before?'새 데이터를 불러왔어요.':`이미 최신이에요. 배트맨 수집 시각: ${DATA?ago(DATA.updated):'-'}`};
+document.getElementById('btnRun').onclick=()=>{document.getElementById('actnote').textContent='GitHub에서 "Run workflow" → 초록 버튼을 누르면 1~2분 뒤 새 배당이 들어와요. 그다음 여기서 새로고침을 누르세요.'};
 load();setInterval(load,120000);setInterval(()=>{if(DATA)draw()},60000);
 </script>
 </body>
