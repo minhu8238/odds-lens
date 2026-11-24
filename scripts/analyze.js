@@ -1,9 +1,9 @@
 // 자동 분석: 현재 회차 각 경기에 (1) 모델 판정 (2) 과거 비슷한 경기 통계를 붙여 data/analysis.json 생성
-// 비슷한 경기 규칙(고정): 같은 시장, 최종 배당 확률이 모든 결과에서 ±1%p 이내. 30경기 미만이면 표시 안 함.
+// 비슷한 경기 규칙(고정): 같은 시장, 최종 배당 확률이 모든 결과에서 ±1%p 이내. 표본이 적어도 그대로 표시(페이지에서 경고).
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const { judge } = require('./model.js');
 const DATA = path.join(__dirname, '..', 'data');
-const TOL = 0.01, MIN_N = 30;
+const TOL = 0.01, MIN_N = 1;
 
 const cache = {};
 function history(key) {
