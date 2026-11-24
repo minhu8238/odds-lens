@@ -173,7 +173,7 @@ function buildPairs(gmTs){
     (PM[ns]=PM[ns]||[]).push(e);
     if(!SM[ns]||SM[ns].n<e.n)SM[ns]={s:x.nrm,n:x.n,lv};SM[hs]={s:x.hdc,n:x.n,lv}}
   return {SM,PM}}
-function applySig(a){a.up=a.fo.map(()=>[]);a.dn=a.fo.map(()=>[]);a.mtags=a.tags.slice();a.mcls=a.cls;a.tags=a.fo.map(()=>'');a.cls='';a.best=0}
+function applySig(a,r){a.up=a.fo.map(()=>[]);a.dn=a.fo.map(()=>[]);a.mtags=a.tags.slice();a.mcls=a.cls;a.tags=a.fo.map(()=>'');a.cls='';a.best=0;a.rec=r||null;if(r){a.tags[r.j]=r.stars>=2?'c':'w';a.cls=a.tags[r.j];a.best=r.j}}
 function analyze(g){
   const three=g.o[1]>0,pk=a=>three?a:[a[0],a[2]];
   const fo=pk(g.o);let io=g.i?pk(g.i):fo.slice();if(io.some(x=>!(x>1)))io=fo.slice();
@@ -213,7 +213,8 @@ function draw(){
   document.getElementById('rswitch').innerHTML=DATA.rounds.length>1?DATA.rounds.map((r,i)=>`<button aria-pressed="${i===RI}" data-i="${i}">${r.gmTs%10000}회차 ${SN[r.saleStatus]||''}</button>`).join(''):'';
   document.querySelectorAll('#filters .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sp!==undefined?String(F.sp===b.dataset.sp):String(!!F[b.dataset.t])));
   const PR=buildPairs(R.gmTs);CUR=PR;
-  const rows=R.games.map(g=>{const a=analyze(g),sim=(AN[R.gmTs+':'+g.s]||{}).sim;applySig(a);return {g,a,sim}});
+  const rows=R.games.map(g=>{const a=analyze(g),sim=(AN[R.gmTs+':'+g.s]||{}).sim;applySig(a,REC[g.s]);return {g,a,sim}});
+  computeRecs(R);
   // 경기(같은 시각·홈·원정)별로 묶기
   const M=new Map();for(const x of rows){const k=x.g.t+'|'+x.g.h+'|'+x.g.a;if(!M.has(k))M.set(k,{t:x.g.t,h:x.g.h,a:x.g.a,lg:x.g.lg,sp:x.g.sp,list:[]});M.get(k).list.push(x)}
   let matches=[...M.values()].map(m=>{m.list.sort((p,q)=>MORDER(p.g)-MORDER(q.g));m.cls=m.list.some(x=>x.a.cls==='c')?'c':m.list.some(x=>x.a.cls==='w')?'w':m.list.some(x=>x.a.cls==='x')?'x':'';m.moved=m.list.some(x=>x.g.c>0);m.past=m.t<=now;const sc=m.list.find(x=>x.g.sc&&x.g.res!=null);m.score=sc?sc.g.sc:'';return m}).sort((p,q)=>p.t-q.t);
@@ -225,16 +226,47 @@ function draw(){
   document.getElementById('list').innerHTML=h||'<div class="empty">조건에 맞는 경기가 없어요. 위쪽 필터를 바꿔 보세요.</div>';
   document.querySelectorAll('.cbox').forEach(b=>{if(CMP[b.dataset.key])runCompare(b)});
 }
+
+// ── 추천: 경기마다 기본 조건으로 자동 검색해서 결과별 '실제 비율 − 지금 배당 기대'를 계산
+// 최종 모드: ±0.06에서 5경기 미만이면 ±0.10, ±0.15로 넓힘. 무브 모드: 내재확률 ±3%p.
+// 추천도 ★★★ 두 모드 모두 같은 결과가 +10%p 이상이고 각각 10경기 이상 · ★★ 두 모드 모두 같은 방향(+) · ★ 한 모드만
+let REC={},RECKEY='';
+async function computeRecs(R){
+  const key=R.gmTs+':'+DATA.updated;if(RECKEY===key)return;RECKEY=key;const rec={};
+  const by={};for(const g of R.games){if(/전반|후반/.test(g.bn||''))continue;(by[g.t+'|'+g.h+'|'+g.a]=by[g.t+'|'+g.h+'|'+g.a]||[]).push(g)}
+  for(const L of Object.values(by)){
+    const N=L.find(g=>/^(승무패|일반 승패|승패)$/.test(g.ty));if(!N)continue;const sp=SPE[N.sp];if(!sp)continue;
+    let rows;try{rows=await loadPairs(sp)}catch(e){continue}
+    for(const H of L.filter(g=>/핸디/.test(g.ty))){
+      const nv=findSimilar(rows,N,H,'move',R.gmTs,{}).err?0:1;
+      let fin=null,used=0.06;for(const ot of [0.06,0.10,0.15]){const r=findSimilar(rows,N,H,'fin',R.gmTs,{ot,vw:nv});fin=r;used=ot;if(r.err||r.list.length>=5)break}
+      const mv=findSimilar(rows,N,H,'move',R.gmTs,{vw:nv});
+      if((fin&&fin.err)||mv.err)continue;
+      const n3=N.o[1]>0,h3=H.o[1]>0,idx=(r,t)=>t?r:(r===2?1:0);
+      const imp=o=>{const inv=o.map(x=>1/x),s=inv.reduce((a,b)=>a+b,0);return inv.map(x=>x/s*100)};
+      const sides=[[N,n3,x=>x.r1],[H,h3,x=>x.r2]];
+      sides.forEach(([G,t,f],si)=>{const exp=imp(pk3(G.o,t));const rate=list=>{const c=exp.map(()=>0);list.forEach(x=>c[idx(f(x),t)]++);return c.map(v=>list.length?v/list.length*100:0)};
+        const A=rate(fin.list),B=rate(mv.list),nA=fin.list.length,nB=mv.list.length;
+        const cand=exp.map((e,j)=>({j,la:A[j]-e,lb:B[j]-e}));
+        let best=null;for(const c of cand){const okA=nA>=5&&c.la>0,okB=nB>=5&&c.lb>0;const stars=(okA&&okB&&c.la>=10&&c.lb>=10&&nA>=10&&nB>=10)?3:(okA&&okB)?2:(okA||okB)?1:0;
+          const score=(okA?c.la:0)+(okB?c.lb:0);if(stars&&(!best||stars>best.stars||(stars===best.stars&&score>best.score)))best={j:c.j,stars,score,la:c.la,lb:c.lb,a:A[c.j],b:B[c.j],e:exp[c.j],nA,nB,used}}
+        if(best){best.nov=!nv;const g=si?H:N;if(!rec[g.s]||rec[g.s].stars<best.stars||(rec[g.s].stars===best.stars&&rec[g.s].score<best.score))rec[g.s]=Object.assign(best,{pair:N.s+':'+H.s})}})
+    }}
+  REC=rec;if(DATA.rounds[RI]===R)draw();
+}
 function drawBrief(rows,R,now){
   const up=rows.filter(x=>x.g.t>now);
   const nm=new Set(up.map(x=>x.g.t+x.g.h)).size,mv=up.filter(x=>x.g.c>0).length;
   const moves=up.filter(x=>x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,8);
   let h=`<h2>남은 경기</h2><div class="counts"><span><b>${nm}</b>경기</span><span><b>${up.length}</b>시장</span><span><b>${mv}</b>배당 바뀐 시장</span></div>`;
+  const recs=up.filter(x=>x.a.rec).sort((p,q)=>q.a.rec.stars-p.a.rec.stars||q.a.rec.score-p.a.rec.score);
+  h+=`<h3>추천 (비슷한 과거 경기 자동 검색)</h3>`;
+  h+=recs.length?recs.slice(0,15).map(x=>{const r=x.a.rec,j=r.j;return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}${x.a.isH?' '+(x.g.ln>0?'+':'')+x.g.ln:''}</small></span><span class="s"><b style="color:${r.stars>=2?'var(--felt)':'var(--amber)'}">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)} <span style="font-size:13px">${'★'.repeat(r.stars)}</span></b><small>최종 ${r.nA}경기 ${r.a.toFixed(0)}%${r.used>0.06?` (±${r.used.toFixed(2)})`:''}</small><small>무브 ${r.nB}경기 ${r.b.toFixed(0)}% · 기대 ${r.e.toFixed(0)}%</small>${r.nov?'<small style="color:var(--brick)">구매율 없이 검색</small>':''}</span></button>`}).join(''):`<div class="none">${RECKEY?'지금은 추천할 만한 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
   h+=`<h3>최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
     const mvs=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
     return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(dtmMs(x.g.lc))}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)} ${mvs}</small></span><span class="s"><small>경기 ${hhmm(x.g.t)}</small></span></button>`}).join(''):'<div class="none">최근 90분 동안 바뀐 배당이 없어요.</div>';
-  h+=`<div class="none" style="font-size:12px;padding-top:10px">경기 블록의 "비슷한 과거 경기"를 누르면 일반·핸디 배당과 구매율이 비슷했던 과거 경기 목록이 나와요.</div>`;
+  h+=`<div class="none" style="font-size:12px;padding-top:10px">추천은 경기마다 일반+핸디를 함께 넣어 '최종+변경+구매율'(±0.06, 5경기 미만이면 ±0.10·±0.15로 넓힘)과 '초기→최종 무브'(±3%p)로 자동 검색한 결과예요. ★★★ 두 방식 모두 같은 결과가 배당 기대보다 10%p 이상 많고 각각 10경기 이상, ★★ 두 방식 모두 기대보다 많음, ★ 한 방식만. 구매율이 아직 안 나온 회차 초반에는 구매율 조건 없이 찾아요. 경기 블록의 "비슷한 과거 경기"를 누르면 목록이 나와요.</div>`;
   document.getElementById('brief').innerHTML=h;
 }
 // ── 비슷한 과거 경기 찾기 (엑셀 필터를 자동으로)
@@ -315,7 +347,7 @@ const isExtra=x=>!x.a.cls&&x.a.cls!==''&&(/홀짝/.test(x.g.ty)||/전반|후반/
 function rowHTML(x,m,extra){
   const {g,a}=x,k=a.fo.length;
   const line=(a.isH||a.isO)&&g.ln!==0?`<small>${a.isH&&g.ln>0?'+':''}${g.ln}</small>`:'';
-  const vlab=a.cls==='c'?`<span class="verdict c">${a.lab.filter((_,j)=>a.tags[j]==='c').join('·')} 자주</span>`:a.cls==='x'?`<span class="verdict x">${a.lab.filter((_,j)=>a.tags[j]==='x').join('·')} 드묾</span>`:'';
+  const vlab=a.rec?`<span class="verdict ${a.cls}">${a.lab[a.best]} ${'★'.repeat(a.rec.stars)}</span>`:'';
   const cells=a.fo.map((o,j)=>{const d=o-a.io[j];const mv=Math.abs(d)>=.005?`<div class="mv ${d<0?'dn':'up'}">${d<0?'▼':'▲'} ${a.io[j].toFixed(2)}</div>`:'<div class="mv"></div>';
     return `<div class="cell ${a.tags[j]}"><div class="sl">${a.lab[j]}</div><div class="od">${o.toFixed(2)}</div>${mv}<div class="vt">${a.V?'구매 '+Math.round(a.V[j]*100)+'%':''}</div></div>`}).join('');
   return `<div class="mrow ${extra} ${OPEN.has(g.s)?'open':''}" role="button" tabindex="0" aria-expanded="${OPEN.has(g.s)}" data-s="${g.s}" style="--k:${k}"><div class="mlab">${marketName(g)}${line}${vlab?'<div>'+vlab+'</div>':''}</div>${cells}<div class="det">${detHTML(x)}</div></div>`}
