@@ -81,7 +81,8 @@ async function post(p, body) {
       const kst = new Date(g.t + 9 * 3600e3), dt = kst.toISOString().slice(0, 10).replace(/-/g, '');
       const o = pk(g.o), i = g.i ? pk(g.i) : o, v = g.v ? pk(g.v) : null, vs = v ? v.reduce((a, b) => a + b, 0) : 0;
       const row = [dt, ...o.map(x => x.toFixed(2)), ...i.map(x => x > 1 ? x.toFixed(2) : ''), ...(vs > 50 ? v.map(x => (x / vs * 100).toFixed(1)) : o.map(() => '')), g.c || 0, g.ln || 0, ri];
-      fs.appendFileSync(path.join(newDir, key + '.csv'), row.join(',') + '\n');
+      const rdDir = path.join(newDir, String(r.gmTs)); fs.mkdirSync(rdDir, { recursive: true });
+      fs.appendFileSync(path.join(rdDir, key + '.csv'), row.join(',') + '\n');
       appended++;
     }
   };
