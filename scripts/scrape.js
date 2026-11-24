@@ -75,9 +75,9 @@ async function post(p, body) {
       seen.add(id);
       if (g.t <= HIST_END) continue;
       const three = g.o[1] > 0, pk = a => three ? a : [a[0], a[2]];
-      const key = marketKey(g.sp, g.ty, three ? 3 : 2);
+      const key = marketKey(g.sp, g.ty, three ? 3 : 2, g.bn);
       let ri = RES[g.res]; if (!three) ri = ri === 2 ? 1 : ri === 0 ? 0 : -1;
-      if (!key || ri < 0) continue;
+      if (!key || ri < 0 || g.bn === undefined) continue;
       const kst = new Date(g.t + 9 * 3600e3), dt = kst.toISOString().slice(0, 10).replace(/-/g, '');
       const o = pk(g.o), i = g.i ? pk(g.i) : o, v = g.v ? pk(g.v) : null, vs = v ? v.reduce((a, b) => a + b, 0) : 0;
       const row = [dt, ...o.map(x => x.toFixed(2)), ...i.map(x => x > 1 ? x.toFixed(2) : ''), ...(vs > 50 ? v.map(x => (x / vs * 100).toFixed(1)) : o.map(() => '')), g.c || 0, g.ln || 0, ri];

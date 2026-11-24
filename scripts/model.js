@@ -2,8 +2,9 @@
 const CFG = {"soccer_normal_3":{"t":0.03,"pick":true,"avoid":true,"ll":true,"c":[1.1597,0.0389,-0.12089,-0.00653,0.0583,-0.03735,0.04453,0.04503,0.1929,0.08212]},"soccer_handicap_3":{"t":0.02,"pick":false,"avoid":true,"ll":true,"c":[1.12475,-0.01116,-0.16265,-0.0131,0.00777,0.03304,0.03192,0.02224,0.18602,0.05048]},"soccer_handicap_2":{"t":0.03,"pick":false,"avoid":true,"ll":true,"c":[1.21374,0.34084,-0.04488,0.0736,-0.13677,0.00353,0.26534,0.11444,-0.11705]},"soccer_ou_2":{"t":0.01,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_normal_2":{"t":0.03,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_handicap_2":{"t":0.02,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_ou_2":{"t":0.06,"pick":false,"avoid":true,"ll":true,"c":[0.88123,0.13153,0.25597,-0.0016,0.15663,0.00048,0.11505,0.07858,-0.0785]},"baseball_w1l_3":{"t":0.02,"pick":false,"avoid":false,"ll":false,"c":[]},"basketball_normal_2":{"t":0.02,"pick":false,"avoid":true,"ll":true,"c":[1.1522,0.07321,-0.11648,0.00385,0.03576,0.00216,-0.48468,-0.00096,0.00062]},"basketball_handicap_2":{"t":0.01,"pick":false,"avoid":false,"ll":true,"c":[0.69344,0.19123,-0.11604,0.00253,0.18673,-0.0002,0.05176,-0.00692,0.00701]},"basketball_ou_2":{"t":0.02,"pick":false,"avoid":false,"ll":true,"c":[-0.01026,-0.0027,0.12443,-4e-05,-0.0008,-0.0,-0.00064,0.0553,-0.05531]},"volleyball_normal_2":{"t":0.04,"pick":false,"avoid":false,"ll":false,"c":[]},"volleyball_handicap_2":{"t":0.06,"pick":false,"avoid":true,"ll":true,"c":[1.29866,0.76942,0.15505,0.02355,-0.03351,0.04792,-0.09765,0.01418,-0.01337]},"volleyball_ou_2":{"t":0.05,"pick":false,"avoid":false,"ll":false,"c":[]}};
 const SPK = { 축구: 'soccer', 야구: 'baseball', 농구: 'basketball', 배구: 'volleyball' };
 // 배트맨 경기 → 시장 키 (과거 데이터 파일명과 같음). 승N패/승1패는 히스토리 키만 있고 모델 없음.
-function marketKey(sp, ty, k) {
-  const S = SPK[sp]; if (!S || /홀짝/.test(ty)) return null;
+function marketKey(sp, ty, k, bn) {
+  // 전반·후반 등 경기 일부 시장과 홀짝은 과거 데이터·모델이 없음
+  const S = SPK[sp]; if (!S || /홀짝/.test(ty) || /전반|후반|이닝|쿼터|세트 /.test(bn || '')) return null;
   let m = null;
   if (/승1패/.test(ty)) m = 'w1l'; else if (/승5패|승N패/.test(ty)) m = 'w5l';
   else if (/승무패|승패/.test(ty) && !/핸디/.test(ty)) m = 'normal';
@@ -27,7 +28,7 @@ function judge(g) {
   const fo = pick(g.o); let io = g.i ? pick(g.i) : fo.slice(); if (io.some(x => !(x > 1))) io = fo.slice();
   const vv = g.v ? pick(g.v) : null, vt = vv ? vv.reduce((a, b) => a + b, 0) : 0;
   const F = norm(fo.map(x => 1 / x)), I = norm(io.map(x => 1 / x)), V = vt >= 50 ? norm(vv) : null, rtp = 1 / fo.reduce((a, x) => a + 1 / x, 0);
-  const key = marketKey(g.sp, g.ty, fo.length), c = key && CFG[key];
+  const key = marketKey(g.sp, g.ty, fo.length, g.bn), c = key && CFG[key];
   const out = { key, k: fo.length, fo, io, F, I, V, rtp, P: null, E: null, tags: fo.map(() => ''), cls: 'n' };
   if (c && c.ll) {
     out.P = predict(F, I, V || F, Math.min(g.c || 0, 3), rtp, c.c); out.E = out.P.map((p, j) => (p - F[j]) * 100); const t = c.t * 100;

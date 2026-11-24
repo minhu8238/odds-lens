@@ -32,7 +32,7 @@ function shape(r, gmTs, saleStatus) {
     const first = (hist[seq] || [])[0];
     return {
       s: seq, t: g('gameDate'), sp: g('itemName'), lg: g('leagueShortName') || g('leagueName'),
-      h: g('homeName'), a: g('awayName'), ty: g('betTypNm') || g('betNm') || '', ln: g('winHandi'),
+      h: g('homeName'), a: g('awayName'), ty: g('betTypNm') || g('betNm') || '', bn: g('betNm') || '', ln: g('winHandi'),
       o: [g('winAllot'), g('drawAllot'), g('loseAllot')],
       i: first ? [first.BCHG_W_ODDS / 100, first.BCHG_D_ODDS / 100, first.BCHG_L_ODDS / 100] : null,
       c: H.length, lc: H.length ? H[H.length - 1].CHG_DTM.slice(0, 12) : null,

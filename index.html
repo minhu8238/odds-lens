@@ -3,145 +3,251 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0e1013">
-<title>ODDS LENS LIVE</title>
+<meta name="theme-color" content="#EEF1EE" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14181E" media="(prefers-color-scheme: dark)">
+<title>ODDS LENS</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <style>
-:root{--bg:#0e1013;--card:#171a1f;--line:#262a31;--tx:#e9ebef;--mut:#8b919c;--acc:#d9b26a;--good:#5fc48f;--bad:#e06c6c;--mid:#9aa3b2}
+:root{
+  --paper:#EEF1EE;--surface:#FFFFFF;--sunk:#F5F7F5;--ink:#151A21;--ink2:#3A414B;--mute:#6B727C;--faint:#A3A9B0;--line:#DDE2DD;
+  --felt:#1D6A4E;--felt-bg:#E3F0E9;--amber:#B7791F;--amber-bg:#F7EEDC;--brick:#B0392A;--brick-bg:#F6E4E1;
+  --r-lg:18px;--r-md:12px;--r-sm:8px;
+}
+@media (prefers-color-scheme:dark){:root{
+  --paper:#14181E;--surface:#1C2129;--sunk:#171B22;--ink:#EEF1F3;--ink2:#C9CFD6;--mute:#8C939C;--faint:#5C636C;--line:#2A3039;
+  --felt:#4FB487;--felt-bg:#163428;--amber:#D9A653;--amber-bg:#33291A;--brick:#E2705F;--brick-bg:#3A201C;
+}}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-body{margin:0;background:var(--bg);color:var(--tx);font:14px/1.45 -apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif}
-.wrap{max-width:720px;margin:0 auto;padding:0 12px 60px}
-header{position:sticky;top:0;z-index:3;background:rgba(14,16,19,.97);padding:12px 0 8px;border-bottom:1px solid var(--line)}
-.top{display:flex;align-items:baseline;justify-content:space-between}
-.brand{font-weight:800;letter-spacing:.14em;font-size:15px}.brand b{color:var(--acc)}
-.upd{font-size:12px;color:var(--mut)}.upd.old{color:var(--bad)}
-.bar{display:flex;gap:6px;overflow-x:auto;margin-top:10px;scrollbar-width:none}.bar::-webkit-scrollbar{display:none}
-.bar button{flex:none;background:#1f232a;border:1px solid var(--line);color:var(--mid);padding:6px 11px;border-radius:999px;font:inherit;font-size:13px}
-.bar button.on{background:var(--acc);color:#14110a;border-color:var(--acc);font-weight:700}
-.sum{display:flex;gap:6px;margin:12px 0 4px;font-size:12px;color:var(--mut);flex-wrap:wrap}
-.sum b{color:var(--tx)}
-.g{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:11px 12px;margin-top:8px}
-.g.c{border-color:var(--acc)}.g.x{border-color:#4a2626}.g.done{opacity:.55}
-.r1{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:var(--mut)}
-.r2{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:3px}
-.tm{font-weight:700;font-size:15px;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tg{flex:none;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;background:#242830;color:var(--mid)}
-.tg.c{background:var(--acc);color:#14110a}.tg.w{background:#3a3220;color:var(--acc)}.tg.x{background:#3a1f1f;color:#f0a0a0}.tg.n{background:none;color:#5d636c;font-weight:500}
-.odds{display:grid;gap:6px;margin-top:9px}
-.odds div{background:#0f1216;border-radius:10px;padding:7px 4px;text-align:center;position:relative}
-.odds small{display:block;font-size:11px;color:var(--mut)}
-.odds b{font-size:16px;font-variant-numeric:tabular-nums}
-.odds .mv{font-size:11px;margin-right:4px}.dn{color:var(--good)}.up{color:var(--bad)}
-.odds .vt{font-size:11px;color:var(--mut)}
-.odds div.hl{outline:1.5px solid var(--acc)}.odds div.av{outline:1.5px solid #6a3030}
-.det{display:none;margin-top:9px;border-top:1px solid var(--line);padding-top:8px;font-size:12px;color:var(--mid)}
-.g.open .det{display:block}
-.det table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
-.det td,.det th{padding:3px 2px;text-align:center}.det th{color:var(--mut);font-weight:500}
-.pos{color:var(--good)}.neg{color:var(--bad)}
-.empty{text-align:center;color:var(--mut);padding:40px 0}
-.auto{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px;margin-top:12px}.ah{font-weight:800;font-size:14px}.as{font-size:12px;color:var(--mut);margin:10px 0 4px}.al{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-top:1px solid #1f232a;font-size:13px;cursor:pointer}.al .tm2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.al>span:last-child{flex:none}
-.simh{margin-top:10px;font-weight:700;color:var(--tx)}.sb{margin-top:6px;padding-top:6px;border-top:1px dashed #262a31}.st{font-size:12px}.sd{font-size:11px;color:var(--mut);font-weight:400}
-.foot{color:var(--mut);font-size:11px;margin-top:18px;line-height:1.6}
+html{background:var(--paper)}
+body{margin:0;color:var(--ink);font-family:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;font-size:15px;line-height:1.5;font-feature-settings:"tnum" 1;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer}
+button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-offset:2px;border-radius:6px}
+.wrap{max-width:640px;margin:0 auto;padding:0 16px 80px}
+
+/* 머리 */
+.head{padding:22px 0 6px}
+.brand{font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--mute)}
+.round{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-top:6px}
+.rtitle{font-size:40px;font-weight:800;letter-spacing:-.03em;line-height:1}
+.rtitle small{font-size:17px;font-weight:600;letter-spacing:0;margin-left:4px;color:var(--ink2)}
+.rmeta{text-align:right;font-size:13px;color:var(--mute);line-height:1.35}
+.rmeta b{color:var(--ink);font-weight:600}
+.rmeta .stale{color:var(--brick)}
+.rswitch{display:flex;gap:6px;margin-top:14px}
+.rswitch button{padding:6px 12px;border-radius:999px;font-size:13px;color:var(--mute);border:1px solid var(--line)}
+.rswitch button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+
+/* 필터 */
+.filters{position:sticky;top:0;z-index:5;background:var(--paper);padding:10px 0;margin:0 -16px;padding-left:16px;padding-right:16px;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;border-bottom:1px solid transparent;transition:border-color .2s}
+.filters::-webkit-scrollbar{display:none}.filters.stuck{border-bottom-color:var(--line)}
+.chip{flex:none;padding:7px 13px;border-radius:999px;font-size:14px;color:var(--ink2);background:var(--surface);border:1px solid var(--line)}
+.chip[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
+.sep{flex:none;width:1px;background:var(--line);margin:4px 2px}
+
+/* 판독 요약 */
+.brief{margin-top:14px;background:var(--surface);border-radius:var(--r-lg);padding:18px 18px 8px}
+.brief h2{margin:0;font-size:17px;font-weight:700;letter-spacing:-.01em}
+.brief .counts{display:flex;gap:16px;margin-top:6px;font-size:13px;color:var(--mute)}
+.brief .counts b{font-size:15px;font-weight:700;margin-right:3px}
+.brief h3{margin:16px 0 4px;font-size:13px;font-weight:600;color:var(--mute)}
+.pick{display:grid;grid-template-columns:44px 1fr auto;gap:10px;align-items:center;padding:10px 0;border-top:1px solid var(--line);text-align:left;width:100%}
+.pick:first-of-type{border-top:0}
+.pick .t{font-size:13px;color:var(--mute)}
+.pick .m{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600;font-size:14px}
+.pick .m small{display:block;font-weight:400;font-size:12px;color:var(--mute)}
+.pick .s{text-align:right;line-height:1.2}
+.pick .s b{font-size:18px;font-weight:800}
+.pick .s small{display:block;font-size:12px;color:var(--mute)}
+.none{font-size:14px;color:var(--faint);padding:6px 0 12px}
+
+/* 시간 구분 */
+.slot{margin:26px 0 8px;display:flex;align-items:baseline;gap:8px}
+.slot b{font-size:22px;font-weight:800;letter-spacing:-.02em}
+.slot span{font-size:13px;color:var(--mute)}
+
+/* 경기 블록 */
+.match{position:relative;background:var(--surface);border-radius:var(--r-lg);padding:14px 16px 6px 20px;margin-top:10px;overflow:hidden}
+.match::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px;background:transparent}
+.match.v-c::before{background:var(--felt)}.match.v-w::before{background:var(--amber)}.match.v-x::before{background:var(--brick)}
+.match.past{opacity:.55}
+.mhead{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.teams{font-size:17px;font-weight:700;letter-spacing:-.01em;line-height:1.3;min-width:0}
+.teams .vs{display:block;color:var(--ink2);font-weight:600}
+.lg{font-size:12px;color:var(--mute);margin-bottom:2px}
+.score{font-size:13px;color:var(--mute);text-align:right;white-space:nowrap}
+.mrow{display:grid;grid-template-columns:76px repeat(var(--k),1fr);gap:6px;align-items:start;padding:10px 0;border-top:1px solid var(--line);width:100%;text-align:left}
+.mrow:first-of-type{border-top:0}
+.mlab{font-size:13px;color:var(--ink2);line-height:1.25;padding-top:3px}
+.mlab small{display:block;color:var(--mute);font-size:12px}
+.cell{border-radius:var(--r-sm);padding:4px 6px 5px;text-align:center}
+.cell .sl{font-size:11px;color:var(--mute)}
+.cell .od{font-size:21px;font-weight:800;letter-spacing:-.02em;line-height:1.15}
+.cell .mv{font-size:11px;line-height:1.2;min-height:13px}
+.cell .mv.dn{color:var(--felt)}.cell .mv.up{color:var(--brick)}
+.cell .vt{font-size:11px;color:var(--faint)}
+.cell.c{background:var(--felt-bg)}.cell.c .od{color:var(--felt)}
+.cell.w{background:var(--amber-bg)}.cell.w .od{color:var(--amber)}
+.cell.x .od{color:var(--faint);text-decoration:line-through;text-decoration-thickness:1.5px;text-decoration-color:var(--brick)}
+.verdict{display:inline-block;margin-top:2px;font-size:12px;font-weight:700;padding:2px 8px;border-radius:6px}
+.verdict.c{background:var(--felt);color:#fff}.verdict.w{background:var(--amber);color:#fff}.verdict.x{background:var(--brick-bg);color:var(--brick)}
+
+/* 상세 */
+.det{grid-column:1/-1;display:none;margin-top:8px;background:var(--sunk);border-radius:var(--r-md);padding:12px 12px 10px;font-size:13px;color:var(--ink2);cursor:default}
+.mrow.open .det{display:block;animation:open .18s ease-out}
+@keyframes open{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){.mrow.open .det{animation:none}.filters{transition:none}}
+.det h4{margin:12px 0 6px;font-size:13px;font-weight:700;color:var(--ink)}
+.det h4:first-child{margin-top:0}
+.det table{width:100%;border-collapse:collapse}
+.det th{font-weight:500;color:var(--mute);font-size:12px;text-align:right;padding:3px 4px}
+.det td{text-align:right;padding:3px 4px}
+.det th:first-child,.det td:first-child{text-align:left;color:var(--mute)}
+.det .pos{color:var(--felt);font-weight:600}.det .neg{color:var(--brick);font-weight:600}
+.det .note{font-size:12px;color:var(--mute);margin-top:4px}
+.flow{display:block;width:100%;height:64px;margin-top:2px}
+.legend{display:flex;gap:12px;font-size:12px;color:var(--mute)}
+.legend i{display:inline-block;width:10px;height:3px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.few{color:var(--brick);font-weight:600}
+
+.empty{text-align:center;color:var(--mute);padding:48px 0}
+.foot{margin-top:34px;font-size:12px;color:var(--mute);line-height:1.7}
+.foot b{color:var(--ink2)}
 </style>
 </head>
 <body>
 <div class="wrap">
-<header>
-  <div class="top"><div class="brand">ODDS <b>LENS</b> LIVE</div><div class="upd" id="upd">불러오는 중…</div></div>
-  <div class="bar" id="rd"></div>
-  <div class="bar" id="flt">
-    <button data-k="sp" data-v="" class="on">전체</button><button data-k="sp" data-v="축구">축구</button><button data-k="sp" data-v="야구">야구</button><button data-k="sp" data-v="농구">농구</button><button data-k="sp" data-v="배구">배구</button>
-    <button data-k="only" id="bOnly">판정 있는 것만</button><button data-k="moved" id="bMoved">배당 움직인 것</button><button data-k="hide" id="bHide" class="on">시작 경기 숨김</button>
+  <div class="head">
+    <div class="brand">ODDS LENS</div>
+    <div class="round"><div class="rtitle" id="rtitle">—</div><div class="rmeta" id="rmeta">불러오는 중</div></div>
+    <div class="rswitch" id="rswitch"></div>
   </div>
-</header>
-<div id="auto"></div>
-<div class="sum" id="sum"></div>
-<div id="list"></div>
-<div class="foot">
-배트맨 공식 데이터를 10분마다 자동으로 받아와요(GitHub 사정에 따라 늦어질 수 있음). 카드를 누르면 배당 변경 이력과 모델 수치가 나와요.<br>
-판정: <b style="color:var(--acc)">후보</b>는 축구 일반만 실전 검증 통과(2024~ ROI −6.3%, 아무거나 −15.5%). <b style="color:#f0a0a0">피하기</b>는 6개 시장 검증(해당 쪽 −20~−34%). 그 밖의 시장은 판정 없음. 어떤 등급도 기대 ROI는 마이너스예요. 구매율은 구매 건수 기준.
-</div>
+  <div class="filters" id="filters">
+    <button class="chip" data-sp="">전체</button><button class="chip" data-sp="축구">축구</button><button class="chip" data-sp="농구">농구</button><button class="chip" data-sp="야구">야구</button><button class="chip" data-sp="배구">배구</button>
+    <span class="sep"></span>
+    <button class="chip" data-t="only">판정 있는 경기</button><button class="chip" data-t="moved">배당 움직인 경기</button><button class="chip" data-t="past">끝난 경기 보기</button>
+  </div>
+  <section class="brief" id="brief"></section>
+  <div id="list"></div>
+  <div class="foot">
+    배트맨 공식 데이터를 10분마다 자동으로 받아와요. 시장 줄을 누르면 배당 흐름과 근거가 열려요.<br>
+    <b>후보</b>는 축구 일반만 실전 검증을 통과했어요(2024년 이후 ROI −6.3%, 아무거나 사면 −15.5%). <b>피하기</b>는 6개 시장에서 검증됐어요. 그 밖의 시장은 판정하지 않아요. 어떤 등급도 기대 ROI는 마이너스예요.
+  </div>
 </div>
 <script>
 const CFG={"soccer_normal_3":{"t":0.03,"pick":true,"avoid":true,"ll":true,"c":[1.1597,0.0389,-0.12089,-0.00653,0.0583,-0.03735,0.04453,0.04503,0.1929,0.08212]},"soccer_handicap_3":{"t":0.02,"pick":false,"avoid":true,"ll":true,"c":[1.12475,-0.01116,-0.16265,-0.0131,0.00777,0.03304,0.03192,0.02224,0.18602,0.05048]},"soccer_handicap_2":{"t":0.03,"pick":false,"avoid":true,"ll":true,"c":[1.21374,0.34084,-0.04488,0.0736,-0.13677,0.00353,0.26534,0.11444,-0.11705]},"soccer_ou_2":{"t":0.01,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_normal_2":{"t":0.03,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_handicap_2":{"t":0.02,"pick":false,"avoid":false,"ll":false,"c":[]},"baseball_ou_2":{"t":0.06,"pick":false,"avoid":true,"ll":true,"c":[0.88123,0.13153,0.25597,-0.0016,0.15663,0.00048,0.11505,0.07858,-0.0785]},"basketball_normal_2":{"t":0.02,"pick":false,"avoid":true,"ll":true,"c":[1.1522,0.07321,-0.11648,0.00385,0.03576,0.00216,-0.48468,-0.00096,0.00062]},"basketball_handicap_2":{"t":0.01,"pick":false,"avoid":false,"ll":true,"c":[0.69344,0.19123,-0.11604,0.00253,0.18673,-0.0002,0.05176,-0.00692,0.00701]},"basketball_ou_2":{"t":0.02,"pick":false,"avoid":false,"ll":true,"c":[-0.01026,-0.0027,0.12443,-4e-05,-0.0008,-0.0,-0.00064,0.0553,-0.05531]},"volleyball_normal_2":{"t":0.04,"pick":false,"avoid":false,"ll":false,"c":[]},"volleyball_handicap_2":{"t":0.06,"pick":false,"avoid":true,"ll":true,"c":[1.29866,0.76942,0.15505,0.02355,-0.03351,0.04792,-0.09765,0.01418,-0.01337]},"volleyball_ou_2":{"t":0.05,"pick":false,"avoid":false,"ll":false,"c":[]}};
-const st={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
-let F=st.get('lensLive.f',{sp:'',only:false,moved:false,hide:true}),DATA=null,AN={},RI=0,OPEN=new Set();
+const store={get(k,d){try{return JSON.parse(localStorage.getItem(k))??d}catch(e){return d}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let F=Object.assign({sp:'',only:false,moved:false,past:false},store.get('lens.f2',{}));
+let DATA=null,AN={},RI=0;const OPEN=new Set();
 const sig=x=>1/(1+Math.exp(-x)),norm=a=>{const s=a.reduce((x,y)=>x+y,0);return a.map(x=>x/s)};
 function predict(Fp,I,V,ch,rtp,w){const k=Fp.length,rd=(rtp-.86)*10,p=[];for(let j=0;j<k;j++){const lf=Math.log(Fp[j]/(1-Fp[j])),mv=Math.log(Fp[j]/I[j]),ht=V[j]-Fp[j];const x=[lf,mv,ht,mv*ht,mv*ch,ht*lf,rd*lf];for(let s=0;s<k;s++)x.push(s===j?1:0);let z=0;x.forEach((v,i)=>z+=v*w[i]);p.push(sig(z))}return norm(p)}
-function mkey(sp,ty,k){const S={축구:'soccer',야구:'baseball',농구:'basketball',배구:'volleyball'}[sp];if(!S||/홀짝|승N패|승\d패/.test(ty))return null;
-  let m=null;if(/승무패|승패/.test(ty)&&!/핸디/.test(ty))m='normal';else if(/핸디/.test(ty))m='handicap';else if(/언더오버/.test(ty))m='ou';return m?`${S}_${m}_${k}`:null}
+function mkey(sp,ty,k,bn){const S={축구:'soccer',야구:'baseball',농구:'basketball',배구:'volleyball'}[sp];if(!S||/홀짝|승N패|승\d패/.test(ty)||/전반|후반|이닝|쿼터|세트 /.test(bn||''))return null;let m=null;if(/승무패|승패/.test(ty)&&!/핸디/.test(ty))m='normal';else if(/핸디/.test(ty))m='handicap';else if(/언더오버/.test(ty))m='ou';return m?`${S}_${m}_${k}`:null}
 function analyze(g){
-  const three=g.o[1]>0,pick=a=>three?a:[a[0],a[2]];
-  const fo=pick(g.o);let io=g.i?pick(g.i):fo.slice();if(io.some(x=>!(x>1)))io=fo.slice();
-  const vv=g.v?pick(g.v):null,vt=vv?vv.reduce((a,b)=>a+b,0):0;
+  const three=g.o[1]>0,pk=a=>three?a:[a[0],a[2]];
+  const fo=pk(g.o);let io=g.i?pk(g.i):fo.slice();if(io.some(x=>!(x>1)))io=fo.slice();
+  const vv=g.v?pk(g.v):null,vt=vv?vv.reduce((a,b)=>a+b,0):0;
   const Fp=norm(fo.map(x=>1/x)),I=norm(io.map(x=>1/x)),V=vt>=50?norm(vv):null,rtp=1/fo.reduce((a,x)=>a+1/x,0);
-  const lab=three?(/핸디/.test(g.ty)?['핸승','핸무','핸패']:['승','무','패']):(/언더오버/.test(g.ty)?['언더','오버']:/핸디/.test(g.ty)?['핸승','핸패']:['승','패']);
-  const key=mkey(g.sp,g.ty,fo.length),c=key&&CFG[key];let P=null,E=null,tags=fo.map(()=>''),verdict='판정 없음',cls='n';
+  const isH=/핸디/.test(g.ty),isO=/언더오버/.test(g.ty);
+  const isS=/홀짝/.test(g.ty);const lab=three?(isH?['핸승','핸무','핸패']:['승','무','패']):(isO?['언더','오버']:isS?['홀','짝']:isH?['핸승','핸패']:['승','패']);
+  const key=mkey(g.sp,g.ty,fo.length,g.bn),c=key&&CFG[key];let P=null,E=null,tags=fo.map(()=>''),cls='n';
   if(c&&c.ll){P=predict(Fp,I,V||Fp,Math.min(g.c,3),rtp,c.c);E=P.map((p,j)=>(p-Fp[j])*100);const t=c.t*100;
     tags=E.map(e=>e>=t&&c.pick?'c':e>=t-1&&e>=1&&c.pick?'w':e<=-2&&c.avoid?'x':'');
-    const ci=tags.indexOf('c'),wi=tags.indexOf('w'),xs=tags.map((x,j)=>x==='x'?lab[j]:null).filter(Boolean);
-    if(ci>=0){verdict=lab[ci]+' 후보';cls='c'}else if(wi>=0){verdict=lab[wi]+' 관심';cls='w'}else if(xs.length){verdict=xs.join('·')+' 피하기';cls='x'}else{verdict='패스';cls=''}}
-  return {fo,io,Fp,V,P,E,lab,tags,verdict,cls,rtp,three}}
+    cls=tags.includes('c')?'c':tags.includes('w')?'w':tags.includes('x')?'x':''}
+  const best=tags.indexOf('c')>=0?tags.indexOf('c'):tags.indexOf('w');
+  return {fo,io,Fp,V,P,E,lab,tags,cls,rtp,three,isH,isO,best}}
 const pad=n=>String(n).padStart(2,'0');
-const hm=ms=>{const d=new Date(ms);return `${d.getMonth()+1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`};
-const dtm=s=>s?`${+s.slice(4,6)}/${+s.slice(6,8)} ${s.slice(8,10)}:${s.slice(10,12)}`:'';
-function ago(ms){const m=Math.round((Date.now()-ms)/60000);return m<1?'방금':m<60?`${m}분 전`:`${Math.floor(m/60)}시간 ${m%60}분 전`}
+const hhmm=ms=>{const d=new Date(ms);return `${pad(d.getHours())}:${pad(d.getMinutes())}`};
+const dayKey=ms=>{const d=new Date(ms);return `${d.getMonth()+1}월 ${d.getDate()}일`};
+const dtmMs=s=>s?new Date(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12)).getTime():0;
+const ago=ms=>{const m=Math.round((Date.now()-ms)/60000);return m<1?'방금':m<60?`${m}분 전`:`${Math.floor(m/60)}시간 전`};
+const sgn=x=>(x>0?'+':x<0?'−':'')+Math.abs(x).toFixed(1);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function marketName(g){const pre=/전반/.test(g.bn||'')?'전반 ':/후반/.test(g.bn||'')?'후반 ':'';return pre+marketName0(g)}
+function marketName0(g){if(/승무패/.test(g.ty))return '승무패';if(/핸디/.test(g.ty))return '핸디캡';if(/언더오버/.test(g.ty))return '언더오버';if(/홀짝/.test(g.ty))return '홀짝';if(/승N패|승\d패/.test(g.ty))return g.ty.replace('일반 ','');if(/승패/.test(g.ty))return '승패';return g.ty.replace('일반 ','')}
+const MORDER=g=>(/전반|후반/.test(g.bn||'')?10:0)+(/승무패|^일반 승패|^승패/.test(g.ty)?0:/핸디/.test(g.ty)?1:/언더오버/.test(g.ty)?2:3);
+
 async function load(){
-  try{const r=await fetch('data/latest.json?'+Date.now());if(!r.ok)throw r.status;DATA=await r.json();try{const a=await fetch('data/analysis.json?'+Date.now());AN=a.ok?(await a.json()).games:{}}catch(e){AN={}}if(RI>=DATA.rounds.length)RI=0;draw()}
-  catch(e){document.getElementById('upd').textContent='데이터 없음 ('+e+')';document.getElementById('list').innerHTML='<div class="empty">아직 받아온 데이터가 없어요. 첫 자동 실행을 기다려 주세요.</div>'}}
+  try{const r=await fetch('data/latest.json?'+Date.now());if(!r.ok)throw new Error(r.status);DATA=await r.json();
+    try{const a=await fetch('data/analysis.json?'+Date.now());AN=a.ok?(await a.json()).games:{}}catch(e){AN={}}
+    if(RI>=DATA.rounds.length)RI=0;draw()}
+  catch(e){document.getElementById('rmeta').textContent='데이터를 받지 못했어요';document.getElementById('list').innerHTML='<div class="empty">자동 수집이 아직 돌지 않았거나 연결이 끊겼어요. 잠시 뒤 새로고침해 주세요.</div>'}}
+
 function draw(){
-  const u=document.getElementById('upd');u.textContent='갱신 '+ago(DATA.updated);u.classList.toggle('old',Date.now()-DATA.updated>45*60000);
-  const SN={SaleIng:'판매중',SaleBefore:'판매 전',SaleComplete:'마감'};
-  document.getElementById('rd').innerHTML=DATA.rounds.map((r,i)=>`<button data-i="${i}" class="${i===RI?'on':''}">${r.gmTs%10000}회차 · ${SN[r.saleStatus]||r.saleStatus||''}</button>`).join('');
-  document.querySelectorAll('#flt button').forEach(b=>{const k=b.dataset.k;b.classList.toggle('on',k==='sp'?F.sp===b.dataset.v:!!F[k])});
   const R=DATA.rounds[RI],now=Date.now();
-  const rows=R.games.map(g=>({g,a:analyze(g)}));
-  const vis=rows.filter(({g,a})=>(!F.sp||g.sp===F.sp)&&(!F.only||a.cls!=='n'&&a.cls!=='')&&(!F.moved||g.c>0)&&(!F.hide||g.t>now)).sort((x,y)=>x.g.t-y.g.t||x.g.s-y.g.s);
-  const cnt=k=>rows.filter(x=>x.a.cls===k&&x.g.t>now).length;
-  document.getElementById('sum').innerHTML=`<span>표시 <b>${vis.length}</b> / ${R.games.length}</span><span>· 남은 경기 중 후보 <b style="color:var(--acc)">${cnt('c')}</b> · 관심 <b>${cnt('w')}</b> · 피하기 <b style="color:#f0a0a0">${cnt('x')}</b></span>`;
-  document.getElementById('auto').innerHTML=autoPanel(rows,R,now);
-  document.getElementById('list').innerHTML=vis.length?vis.map(({g,a})=>card(g,a,now,R.gmTs)).join(''):'<div class="empty">조건에 맞는 경기가 없어요.</div>';
+  const SN={SaleIng:'판매 중',SaleBefore:'판매 전',SaleComplete:'판매 마감'};
+  document.getElementById('rtitle').innerHTML=`${R.gmTs%10000}<small>회차</small>`;
+  const stale=now-DATA.updated>45*60000;
+  document.getElementById('rmeta').innerHTML=`<b>${SN[R.saleStatus]||''}</b><br><span class="${stale?'stale':''}">${ago(DATA.updated)} 갱신</span>`;
+  document.getElementById('rswitch').innerHTML=DATA.rounds.length>1?DATA.rounds.map((r,i)=>`<button aria-pressed="${i===RI}" data-i="${i}">${r.gmTs%10000}회차 ${SN[r.saleStatus]||''}</button>`).join(''):'';
+  document.querySelectorAll('#filters .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sp!==undefined?String(F.sp===b.dataset.sp):String(!!F[b.dataset.t])));
+  const rows=R.games.map(g=>({g,a:analyze(g),sim:(AN[R.gmTs+':'+g.s]||{}).sim}));
+  // 경기(같은 시각·홈·원정)별로 묶기
+  const M=new Map();for(const x of rows){const k=x.g.t+'|'+x.g.h+'|'+x.g.a;if(!M.has(k))M.set(k,{t:x.g.t,h:x.g.h,a:x.g.a,lg:x.g.lg,sp:x.g.sp,list:[]});M.get(k).list.push(x)}
+  let matches=[...M.values()].map(m=>{m.list.sort((p,q)=>MORDER(p.g)-MORDER(q.g));m.cls=m.list.some(x=>x.a.cls==='c')?'c':m.list.some(x=>x.a.cls==='w')?'w':m.list.some(x=>x.a.cls==='x')?'x':'';m.moved=m.list.some(x=>x.g.c>0);m.past=m.t<=now;const sc=m.list.find(x=>x.g.sc&&x.g.res!=null);m.score=sc?sc.g.sc:'';return m}).sort((p,q)=>p.t-q.t);
+  drawBrief(rows,R,now);
+  const vis=matches.filter(m=>(!F.sp||m.sp===F.sp)&&(!F.only||m.cls)&&(!F.moved||m.moved)&&(F.past||!m.past));
+  let h='',lastSlot='';
+  for(const m of vis){const slot=dayKey(m.t)+' '+hhmm(m.t);if(slot!==lastSlot){h+=`<div class="slot"><b>${hhmm(m.t)}</b><span>${dayKey(m.t)}${m.past?' · 시작함':''}</span></div>`;lastSlot=slot}
+    h+=matchHTML(m)}
+  document.getElementById('list').innerHTML=h||'<div class="empty">조건에 맞는 경기가 없어요. 위쪽 필터를 바꿔 보세요.</div>';
 }
-function simOf(gmTs,g){const x=AN[gmTs+':'+g.s];return x&&x.sim}
-function simTxt(sm,a){if(!sm)return '';
-  const blk=(t,desc,x)=>{if(!x)return `<div class="sb"><div class="st">${t} <span class="sd">${desc}</span></div><div class="sd">구매율 정보 없음</div></div>`;
-    if(!x.n)return `<div class="sb"><div class="st">${t} <span class="sd">${desc}</span></div><div class="sd">비슷한 경기 0개</div></div>`;
-    const ok=j=>x.dA&&x.dB&&x.nA>=10&&x.nB>=10&&Math.sign(x.dA[j])===Math.sign(x.dB[j])&&Math.abs(x.act[j]-x.exp[j])>=1;
-    const few=x.n<30?` <b style="color:var(--bad)">표본 적음</b>`:'';
-    return `<div class="sb"><div class="st">${t} <b style="color:var(--tx)">${x.n.toLocaleString()}경기</b>${few} <span class="sd">${desc} · ~2022 ${x.nA} / 2023~ ${x.nB}</span></div>
-    <table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>실제</td>${x.act.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>배당 기대</td>${x.exp.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>차이</td>${x.act.map((v,j)=>{const d=v-x.exp[j];return `<td class="${ok(j)?(d>0?'pos':'neg'):''}">${d>0?'+':''}${d.toFixed(1)}${ok(j)?'*':''}</td>`}).join('')}</tr></table></div>`};
-  const k=a.fo.length,t=k===3?'2':'1.5',vt=k===3?'10':'7';
-  return `<div class="simh">과거 비슷한 경기</div>${blk('① 최종만','최종 배당 확률 ±1%p',sm.fin)}${blk('② ATLAS',`초기·최종 ±${t}%p · 움직임 방향 · 변경 여부 일치`,sm.atlas)}${blk('③ ATLAS+구매율',`②에 구매율 ±${vt}%p`,sm.atlasV)}<div style="font-size:11px;color:var(--mut)">같은 시장·같은 기준점만 비교. * 두 기간(~2022, 2023~) 모두 같은 방향. 참고용이며 판정은 모델 기준이에요.</div>`}
-function autoPanel(rows,R,now){
+function drawBrief(rows,R,now){
   const up=rows.filter(x=>x.g.t>now);
-  const picks=up.filter(x=>x.a.cls==='c'||x.a.cls==='w').sort((p,q)=>p.g.t-q.g.t);
-  const lc=s=>s?new Date(+s.slice(0,4),+s.slice(4,6)-1,+s.slice(6,8),+s.slice(8,10),+s.slice(10,12)).getTime():0;
-  const moves=up.filter(x=>x.g.lc&&now-lc(x.g.lc)<=90*60000).sort((p,q)=>lc(q.g.lc)-lc(p.g.lc)).slice(0,8);
-  const line=(x,extra)=>{const j=x.a.tags.findIndex(t=>t==='c'||t==='w');return `<div class="al" data-s="${x.g.s}"><span class="tm2">${hm(x.g.t).split(' ')[1]} ${x.g.h} vs ${x.g.a}</span><span>${extra}</span></div>`};
-  let h='<div class="auto"><div class="ah">자동 분석 · '+(R.gmTs%10000)+'회차</div>';
-  h+=`<div class="as">추천 후보 ${picks.length?'':'<span style="color:var(--mut)">· 지금은 없음</span>'}</div>`;
-  h+=picks.map(x=>{const j=x.a.tags.findIndex(t=>t==='c'||t==='w');const sm=simOf(R.gmTs,x.g);const s2=(()=>{if(!sm)return '';const f=x=>x&&x.n?`${x.act[j]-x.exp[j]>0?'+':''}${(x.act[j]-x.exp[j]).toFixed(1)}(${x.n})`:'–';return ` · 과거 ${f(sm.fin)} / ATLAS ${f(sm.atlas)}`})();return line(x,`<b style="color:${x.a.cls==='c'?'var(--acc)':'var(--tx)'}">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b> <span class="pos">+${x.a.E[j].toFixed(1)}</span>${s2}`)}).join('');
-  h+=`<div class="as">최근 90분 배당 변동 ${moves.length?'':'<span style="color:var(--mut)">· 없음</span>'}</div>`;
-  h+=moves.map(x=>{const mv=x.a.fo.map((o,j)=>{const last=x.g.ch[x.g.ch.length-1];const prev=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const pi=prev?(x.a.three?[prev[1],prev[2],prev[3]]:[prev[1],prev[3]]):x.a.io;const d=o-pi[j];return Math.abs(d)>=0.005?`${x.a.lab[j]} ${pi[j].toFixed(2)}→<b class="${d<0?'dn':'up'}">${o.toFixed(2)}</b>`:''}).filter(Boolean).join(' ');return line(x,`<span style="color:var(--mut)">${dtm(x.g.lc).split(' ')[1]}</span> ${mv}`)}).join('');
-  return h+'</div>'}
-function card(g,a,now,gmTs){
-  const line=/핸디|언더오버/.test(g.ty)&&g.ln!==0?` <b style="color:var(--tx)">${g.ln>0&&/핸디/.test(g.ty)?'+':''}${g.ln}</b>`:'';
-  const k=a.fo.length;
-  const cells=a.fo.map((o,j)=>{const d=o-a.io[j];const mv=Math.abs(d)>=0.005?`<span class="mv ${d<0?'dn':'up'}">${a.io[j].toFixed(2)}${d<0?'▼':'▲'}</span>`:'';
-    return `<div class="${a.tags[j]==='c'||a.tags[j]==='w'?'hl':a.tags[j]==='x'?'av':''}"><small>${a.lab[j]}</small>${mv}<b>${o.toFixed(2)}</b><div class="vt">${a.V?'구매 '+(a.V[j]*100).toFixed(0)+'%':'&nbsp;'}</div></div>`}).join('');
-  const hist=g.ch&&g.ch.length?`<table><tr><th>변경 시각</th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>처음</td>${a.io.map(x=>`<td>${x.toFixed(2)}</td>`).join('')}</tr>${g.ch.map(c=>{const o=a.three?[c[1],c[2],c[3]]:[c[1],c[3]];return `<tr><td>${dtm(c[0])}</td>${o.map(x=>`<td>${x.toFixed(2)}</td>`).join('')}</tr>`}).join('')}</table>`:'배당 변경 없음';
-  const model=a.P?`<div style="margin-top:6px">배당 확률 ${a.Fp.map(x=>(x*100).toFixed(1)).join(' / ')} → 모델 ${a.P.map(x=>(x*100).toFixed(1)).join(' / ')} · 우위 ${a.E.map((e,j)=>`<span class="${a.tags[j]==='x'?'neg':a.tags[j]?'pos':''}">${e>0?'+':''}${e.toFixed(1)}</span>`).join(' / ')}%p</div>`:'<div style="margin-top:6px">이 시장은 모델이 배당을 이기지 못해 판정하지 않아요.</div>';
-  const res=g.t<now&&g.sc&&g.res!=null?` · 결과 ${g.sc}`:'';
-  return `<div class="g ${a.cls==='c'?'c':a.cls==='x'?'x':''} ${g.t<now?'done':''} ${OPEN.has(g.s)?'open':''}" data-s="${g.s}">
-  <div class="r1"><span>${hm(g.t)} · ${g.lg||''} · ${g.ty}${line}</span><span>${g.c?`변경 ${g.c}회 · ${dtm(g.lc).split(' ')[1]}`:''}</span></div>
-  <div class="r2"><div class="tm">${g.h} <span style="color:var(--mut);font-weight:400">vs</span> ${g.a}</div><span class="tg ${a.cls}">${a.verdict}</span></div>
-  <div class="odds" style="grid-template-columns:repeat(${k},1fr)">${cells}</div>
-  <div class="det">${hist}${model}${simTxt(simOf(gmTs,g),a)}<div style="margin-top:4px">환급률 ${(a.rtp*100).toFixed(1)}%${res}</div></div></div>`}
-document.getElementById('rd').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;RI=+b.dataset.i;draw()});
-document.getElementById('flt').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const k=b.dataset.k;if(k==='sp')F.sp=b.dataset.v;else F[k]=!F[k];st.set('lensLive.f',F);draw()});
-document.getElementById('auto').addEventListener('click',e=>{const l=e.target.closest('.al');if(!l)return;const s=+l.dataset.s;OPEN.add(s);F.only=false;F.sp='';F.moved=false;st.set('lensLive.f',F);draw();const c=document.querySelector(`.g[data-s="${s}"]`);if(c)c.scrollIntoView({behavior:'smooth',block:'center'})});
-document.getElementById('list').addEventListener('click',e=>{const c=e.target.closest('.g');if(!c)return;const s=+c.dataset.s;OPEN.has(s)?OPEN.delete(s):OPEN.add(s);c.classList.toggle('open')});
-load();setInterval(load,120000);setInterval(()=>DATA&&(document.getElementById('upd').textContent='갱신 '+ago(DATA.updated)),30000);
+  const n=k=>up.filter(x=>x.a.cls===k).length;
+  const picks=up.filter(x=>x.a.cls==='c'||x.a.cls==='w').sort((p,q)=>(p.a.cls===q.a.cls?0:p.a.cls==='c'?-1:1)||p.g.t-q.g.t).slice(0,8);
+  const moves=up.filter(x=>x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,6);
+  let h=`<h2>남은 경기 판독</h2><div class="counts"><span><b style="color:var(--felt)">${n('c')}</b>후보</span><span><b style="color:var(--amber)">${n('w')}</b>관심</span><span><b style="color:var(--brick)">${n('x')}</b>피하기</span><span><b>${up.length}</b>시장</span></div>`;
+  h+=`<h3>지금 볼 경기</h3>`;
+  h+=picks.length?picks.map(x=>{const j=x.a.best;
+    return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}</small></span><span class="s"><b style="color:${x.a.cls==='c'?'var(--felt)':'var(--amber)'}">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>모델 ${sgn(x.a.E[j])}%p</small>${x.sim&&x.sim.fin&&x.sim.fin.n?`<small>과거 ${sgn(x.sim.fin.act[j]-x.sim.fin.exp[j])}%p</small>`:''}</span></button>`}).join(''):'<div class="none">지금은 후보나 관심 경기가 없어요.</div>';
+  h+=`<h3>최근 90분 배당 변동</h3>`;
+  h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
+    const mv=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
+    return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(dtmMs(x.g.lc))}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)} ${mv}</small></span><span class="s"><small>경기 ${hhmm(x.g.t)}</small></span></button>`}).join(''):'<div class="none">최근 90분 동안 바뀐 배당이 없어요.</div>';
+  document.getElementById('brief').innerHTML=h;
+}
+function matchHTML(m){
+  return `<article class="match v-${m.cls} ${m.past?'past':''}"><div class="mhead"><div><div class="lg">${esc(m.lg||'')} ${esc(m.sp)}</div><div class="teams">${esc(m.h)}<span class="vs">${esc(m.a)}</span></div></div><div class="score">${m.score?esc(m.score):''}</div></div>
+  ${m.list.map(x=>rowHTML(x,m)).join('')}</article>`}
+function rowHTML(x,m){
+  const {g,a}=x,k=a.fo.length;
+  const line=(a.isH||a.isO)&&g.ln!==0?`<small>${a.isH&&g.ln>0?'+':''}${g.ln}</small>`:'';
+  const vlab=a.cls==='c'||a.cls==='w'?`<span class="verdict ${a.cls}">${a.lab[a.best]} ${a.cls==='c'?'후보':'관심'}</span>`:a.cls==='x'?`<span class="verdict x">${a.lab.filter((_,j)=>a.tags[j]==='x').join('·')} 피하기</span>`:'';
+  const cells=a.fo.map((o,j)=>{const d=o-a.io[j];const mv=Math.abs(d)>=.005?`<div class="mv ${d<0?'dn':'up'}">${d<0?'▼':'▲'} ${a.io[j].toFixed(2)}</div>`:'<div class="mv"></div>';
+    return `<div class="cell ${a.tags[j]}"><div class="sl">${a.lab[j]}</div><div class="od">${o.toFixed(2)}</div>${mv}<div class="vt">${a.V?'구매 '+Math.round(a.V[j]*100)+'%':''}</div></div>`}).join('');
+  return `<div class="mrow ${OPEN.has(g.s)?'open':''}" role="button" tabindex="0" aria-expanded="${OPEN.has(g.s)}" data-s="${g.s}" style="--k:${k}"><div class="mlab">${marketName(g)}${line}${vlab?'<div>'+vlab+'</div>':''}</div>${cells}<div class="det">${detHTML(x)}</div></div>`}
+function flowSVG(g,a){
+  const pts=[a.io].concat((g.ch||[]).map(c=>a.three?[c[1],c[2],c[3]]:[c[1],c[3]]));
+  if(pts.length<2)return '<div class="note">배당 변경 없이 처음 배당 그대로예요.</div>';
+  const P=pts.map(p=>norm(p.map(x=>1/x)));
+  const D=P.map(p=>p.map((v,j)=>v-P[0][j]));const W=300,H=60,pad=5,amp=Math.max(.01,...D.flat().map(Math.abs)),mn=-amp,rng=2*amp;
+  const cols=a.three?['var(--felt)','var(--faint)','var(--brick)']:['var(--felt)','var(--brick)'];
+  const X=i=>pad+i*(W-2*pad)/(D.length-1),Y=v=>pad+(1-(v-mn)/rng)*(H-2*pad);
+  const paths=`<line x1="0" x2="${W}" y1="${H/2}" y2="${H/2}" stroke="var(--line)" stroke-dasharray="3 3"/>`+a.fo.map((_,j)=>{let d='';D.forEach((p,i)=>{d+=(i?` H${X(i).toFixed(1)} V${Y(p[j]).toFixed(1)}`:`M${X(0).toFixed(1)} ${Y(p[j]).toFixed(1)}`)});return `<path d="${d}" fill="none" stroke="${cols[j]}" stroke-width="2" stroke-linejoin="round"/>`}).join('');
+  const times=['처음'].concat(g.ch.map(c=>`${+c[0].slice(6,8)}일 ${c[0].slice(8,10)}:${c[0].slice(10,12)}`));
+  return `<svg class="flow" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="배당 확률 흐름">${paths}</svg>
+  <div class="legend">${a.lab.map((l,j)=>`<span><i style="background:${cols[j]}"></i>${l}</span>`).join('')}<span style="margin-left:auto">처음 대비 확률 변화 ±${(amp*100).toFixed(1)}%p</span></div>
+  <table style="margin-top:6px"><tr><th>시각</th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr>${pts.map((p,i)=>`<tr><td>${times[i]}</td>${p.map(v=>`<td>${v.toFixed(2)}</td>`).join('')}</tr>`).join('')}</table>`}
+function simBlock(title,desc,s,a){
+  if(!s)return `<h4>${title}</h4><div class="note">${desc} · 구매율 정보가 없어 비교하지 않았어요.</div>`;
+  if(!s.n)return `<h4>${title}</h4><div class="note">${desc} · 비슷한 경기가 없어요.</div>`;
+  const ok=j=>s.dA&&s.dB&&s.nA>=10&&s.nB>=10&&Math.sign(s.dA[j])===Math.sign(s.dB[j])&&Math.abs(s.act[j]-s.exp[j])>=1;
+  return `<h4>${title} <span style="font-weight:500;color:var(--mute)">${s.n.toLocaleString()}경기</span>${s.n<30?' <span class="few">표본 적음</span>':''}</h4><div class="note" style="margin-top:-4px">${desc} · ~2022 ${s.nA}, 2023~ ${s.nB}</div>
+  <table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>실제</td>${s.act.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>배당 기대</td>${s.exp.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>차이</td>${s.act.map((v,j)=>{const d=v-s.exp[j];return `<td class="${ok(j)?(d>0?'pos':'neg'):''}">${sgn(d)}${ok(j)?'*':''}</td>`}).join('')}</tr></table>`}
+function detHTML(x){
+  const {g,a,sim}=x;let h='<h4>배당 흐름</h4>'+flowSVG(g,a);
+  h+='<h4>모델</h4>'+(a.P?`<table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>배당 확률</td>${a.Fp.map(v=>`<td>${(v*100).toFixed(1)}%</td>`).join('')}</tr><tr><td>모델 확률</td>${a.P.map(v=>`<td>${(v*100).toFixed(1)}%</td>`).join('')}</tr><tr><td>우위</td>${a.E.map((e,j)=>`<td class="${a.tags[j]==='x'?'neg':a.tags[j]?'pos':''}">${sgn(e)}</td>`).join('')}</tr></table><div class="note">환급률 ${(a.rtp*100).toFixed(1)}%</div>`:`<div class="note">이 시장은 모델이 배당보다 나은 예측을 하지 못해서 판정하지 않아요. 환급률 ${(a.rtp*100).toFixed(1)}%</div>`);
+  if(sim){const t=a.three?'2':'1.5',v=a.three?'10':'7';
+    h+=simBlock('과거 비슷한 경기 · 최종 배당','최종 배당 확률 ±1%p',sim.fin,a)+simBlock('과거 비슷한 경기 · ATLAS',`초기·최종 ±${t}%p, 움직임 방향과 변경 여부 일치`,sim.atlas,a)+simBlock('과거 비슷한 경기 · ATLAS + 구매율',`ATLAS에 구매율 ±${v}%p`,sim.atlasV,a);
+    h+='<div class="note" style="margin-top:8px">같은 시장·같은 기준점, 직전 회차까지의 경기만 비교해요. *는 두 기간 모두 같은 방향. 참고용이며 판정은 모델 기준이에요.</div>'}
+  return h}
+document.getElementById('rswitch').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;RI=+b.dataset.i;draw()});
+document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;if(b.dataset.sp!==undefined)F.sp=b.dataset.sp;else F[b.dataset.t]=!F[b.dataset.t];store.set('lens.f2',F);draw()});
+const toggle=el=>{if(!el)return;const s=+el.dataset.s;OPEN.has(s)?OPEN.delete(s):OPEN.add(s);el.classList.toggle('open');el.setAttribute('aria-expanded',el.classList.contains('open'))};
+document.getElementById('list').addEventListener('click',e=>{if(e.target.closest('.det'))return;toggle(e.target.closest('.mrow'))});
+document.getElementById('list').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&e.target.classList.contains('mrow')){e.preventDefault();toggle(e.target)}});
+document.getElementById('brief').addEventListener('click',e=>{const b=e.target.closest('.pick');if(!b)return;const s=+b.dataset.s;OPEN.add(s);F.sp='';F.only=false;F.moved=false;store.set('lens.f2',F);draw();const el=document.querySelector(`.mrow[data-s="${s}"]`);if(el)el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'center'})});
+const fl=document.getElementById('filters');new IntersectionObserver(([e])=>fl.classList.toggle('stuck',e.intersectionRatio<1),{threshold:[1],rootMargin:'-1px 0px 0px 0px'}).observe(fl);
+load();setInterval(load,120000);setInterval(()=>{if(DATA)draw()},60000);
 </script>
 </body>
 </html>
