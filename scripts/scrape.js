@@ -83,6 +83,13 @@ async function post(p, body) {
       const row = [dt, ...o.map(x => x.toFixed(2)), ...i.map(x => x > 1 ? x.toFixed(2) : ''), ...(vs > 50 ? v.map(x => (x / vs * 100).toFixed(1)) : o.map(() => '')), g.c || 0, g.ln || 0, ri];
       const rdDir = path.join(newDir, String(r.gmTs)); fs.mkdirSync(rdDir, { recursive: true });
       fs.appendFileSync(path.join(rdDir, key + '.csv'), row.join(',') + '\n');
+      // ATLAS 형식(이름·스코어·기준점 포함): dt,lg,h,a,sc,iw,id,il,w,d,l,ch,ihc,hc,vw,vd,vl,s
+      const kd = new Date(g.t + 9 * 3600e3).toISOString(), dtm = kd.slice(0, 10).replace(/-/g, '') + kd.slice(11, 16).replace(':', '');
+      const cl = x => String(x == null ? '' : x).replace(/,/g, ' ');
+      const I3 = g.i && g.i[0] > 1 && g.i[2] > 1 && (!three || g.i[1] > 1) ? g.i : g.o;
+      const vp = vs > 50 ? [g.v[0] / vs * 100, three ? g.v[1] / vs * 100 : 0, g.v[2] / vs * 100].map(x => x.toFixed(2)) : ['', '', ''];
+      const arow = [dtm, cl(g.lg), cl(g.h), cl(g.a), cl(g.sc), I3[0], three ? I3[1] : 0, I3[2], g.o[0], three ? g.o[1] : 0, g.o[2], g.c || 0, g.il != null ? g.il : (g.ln || 0), g.ln || 0, ...vp, three ? 'WDL'[ri] : (ri === 0 ? 'W' : 'L')];
+      fs.appendFileSync(path.join(rdDir, 'atlas_' + key + '.csv'), arow.join(',') + '\n');
       appended++;
     }
   };
