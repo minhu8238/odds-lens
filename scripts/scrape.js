@@ -7,9 +7,9 @@ const BASE = 'https://www.betman.co.kr';
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let calls = 0;
 async function post(p, body) {
-  if (++calls > 40) throw new Error('요청 횟수 초과');
+  if (++calls > 60) throw new Error('요청 횟수 초과');
   await sleep(400);
-  for (let attempt = 0; attempt < 2; attempt++) {
+  for (let attempt = 0; attempt < 4; attempt++) {
     try {
       const res = await fetch(BASE + p, {
         method: 'POST',
@@ -27,9 +27,9 @@ async function post(p, body) {
       const text = await res.text();
       try { return JSON.parse(text) } catch (e) { throw new Error(`JSON 아님 (HTTP ${res.status}): ${text.slice(0, 120)}`) }
     } catch (e) {
-      if (attempt) throw e;
+      if (attempt === 3) throw e;
       console.log('재시도:', e.message);
-      await sleep(3000);
+      await sleep(3000 * (attempt + 1));
     }
   }
 }
