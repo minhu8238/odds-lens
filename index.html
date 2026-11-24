@@ -213,8 +213,12 @@ function drawBrief(rows,R,now){
   const moves=up.filter(x=>x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,6);
   const why=u=>u.map(v=>`${v.name} ${v.act.toFixed(0)}% (기대 ${v.exp.toFixed(0)}%, ${v.n}경기)`).join('<br>');
   let h=`<h2>남은 경기에서 과거 패턴</h2><div class="counts"><span><b style="color:var(--felt)">${items.length}</b>자주 나온 결과</span><span><b style="color:var(--brick)">${lows.length}</b>드물게 나온 결과</span><span><b>${up.length}</b>시장</span></div>`;
-  h+=`<h3>비슷한 배당 무브·구매율에서 유의미하게 자주 나온 결과</h3>`;
-  h+=items.length?items.slice(0,12).map(({x,j,u})=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}${x.g.ln&&(x.a.isH||x.a.isO)?' '+x.g.ln:''}${x.g.c?', 배당 '+x.g.c+'번 변경':', 배당 변동 없음'}</small></span><span class="s"><b style="color:var(--felt)">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>${why(u)}</small></span></button>`).join(''):'<div class="none">지금은 유의미한 패턴이 나온 경기가 없어요.</div>';
+  const roi=it=>Math.max(...it.u.map(v=>v.act/100*it.x.a.fo[it.j]-1));
+  items.forEach(it=>it.r=roi(it));
+  const card=({x,j,u,r})=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}${x.g.ln&&(x.a.isH||x.a.isO)?' '+x.g.ln:''}${x.g.c?', 배당 '+x.g.c+'번 변경':', 배당 변동 없음'}</small></span><span class="s"><b style="color:var(--felt)">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>${why(u)}</small><small style="color:${r>=0?'var(--felt)':'var(--mute)'}">과거 기준 수익 ${sgn(r*100)}%</small></span></button>`;
+  const lo=items.filter(it=>it.x.a.fo[it.j]<2).sort((p,q)=>q.r-p.r),hi=items.filter(it=>it.x.a.fo[it.j]>=2).sort((p,q)=>q.r-p.r);
+  h+=`<h3>배당 2.0 이상에서 유의미하게 자주 나온 결과</h3>`+(hi.length?hi.slice(0,8).map(card).join(''):'<div class="none">지금은 없어요. 높은 배당은 과거에도 기대만큼 안 나온 경우가 많아서 드물게 잡혀요.</div>');
+  h+=`<h3>배당 2.0 미만에서 유의미하게 자주 나온 결과</h3>`+(lo.length?lo.slice(0,8).map(card).join(''):'<div class="none">지금은 없어요.</div>');
   if(lows.length)h+=`<h3>유의미하게 드물게 나온 결과</h3>`+lows.slice(0,6).map(({x,j,u})=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)}</small></span><span class="s"><b style="color:var(--brick)">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>${why(u)}</small></span></button>`).join('');
   h+=`<h3>최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
