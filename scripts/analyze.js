@@ -34,12 +34,24 @@ function history(key) {
   }
   return cache[key] = { k, rows };
 }
+// 이항 꼬리확률: 기대 확률 p로 n번 중 c번 이상(up) / 이하(dn) 나올 확률
+function lgam(x) { const g = [76.18009172947146, -86.50532032941677, 24.01409824083091, -1.231739572450155, 0.1208650973866179e-2, -0.5395239384953e-5]; let y = x, t = x + 5.5; t -= (x + .5) * Math.log(t); let s = 1.000000000190015; for (const v of g) s += v / ++y; return -t + Math.log(2.5066282746310005 * s / x) }
+function binTail(n, c, p, up) {
+  p = Math.min(Math.max(p, 1e-6), 1 - 1e-6);
+  const lc = (n, k) => lgam(n + 1) - lgam(k + 1) - lgam(n - k + 1);
+  let s = 0; const from = up ? c : 0, to = up ? n : c;
+  for (let k = from; k <= to; k++) s += Math.exp(lc(n, k) + k * Math.log(p) + (n - k) * Math.log(1 - p));
+  return Math.min(1, s);
+}
 function stat(sel, k) {
   const r = x => Math.round(x * 1000) / 10;
   const S = list => { const m = list.length; if (!m) return null; const act = Array(k).fill(0), exp = Array(k).fill(0); for (const x of list) { act[x.r]++; for (let j = 0; j < k; j++) exp[j] += x.F[j] } return { m, act: act.map(v => v / m), exp: exp.map(v => v / m) } };
   const all = S(sel); if (!all) return { n: 0 };
   const A = S(sel.filter(x => x.y <= 2022)), B = S(sel.filter(x => x.y >= 2023));
-  return { n: all.m, act: all.act.map(r), exp: all.exp.map(r), nA: A ? A.m : 0, nB: B ? B.m : 0,
+  const cnt = all.act.map(v => Math.round(v * all.m));
+  const pu = cnt.map((c, j) => +binTail(all.m, c, all.exp[j], true).toPrecision(3));
+  const pd = cnt.map((c, j) => +binTail(all.m, c, all.exp[j], false).toPrecision(3));
+  return { n: all.m, cnt, pu, pd, act: all.act.map(r), exp: all.exp.map(r), nA: A ? A.m : 0, nB: B ? B.m : 0,
     dA: A ? A.act.map((x, j) => r(x - A.exp[j])) : null, dB: B ? B.act.map((x, j) => r(x - B.exp[j])) : null };
 }
 function similar(key, q, round) {

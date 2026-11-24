@@ -126,13 +126,13 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   <div class="filters" id="filters">
     <button class="chip" data-sp="">전체</button><button class="chip" data-sp="축구">축구</button><button class="chip" data-sp="농구">농구</button><button class="chip" data-sp="야구">야구</button><button class="chip" data-sp="배구">배구</button>
     <span class="sep"></span>
-    <button class="chip" data-t="only">판정 있는 경기</button><button class="chip" data-t="moved">배당 움직인 경기</button><button class="chip" data-t="past">끝난 경기 보기</button>
+    <button class="chip" data-t="only">패턴 있는 경기</button><button class="chip" data-t="moved">배당 움직인 경기</button><button class="chip" data-t="past">끝난 경기 보기</button>
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
   <div class="foot">
     배트맨 공식 데이터를 10분마다 자동으로 받아와요. 시장 줄을 누르면 배당 흐름과 근거가 열려요.<br>
-    <b>후보</b>는 축구 일반만 실전 검증을 통과했어요(2024년 이후 ROI −6.3%, 아무거나 사면 −15.5%). <b>피하기</b>는 6개 시장에서 검증됐어요. 그 밖의 시장은 판정하지 않아요. 어떤 등급도 기대 ROI는 마이너스예요.
+    <b>자주</b>·<b>드묾</b>은 과거에 배당 무브(초기→최종)가 비슷했던 경기, 또는 무브와 구매율이 함께 비슷했던 경기에서 그 결과가 배당 기대보다 많이(적게) 나왔고, 10경기 이상이며 우연일 확률이 5% 미만이라는 뜻이에요. 과거 패턴이지 수익 보장은 아니에요.
   </div>
 </div>
 <script>
@@ -143,6 +143,19 @@ let DATA=null,AN={},RI=0;const OPEN=new Set(),OPENM=new Set();
 const sig=x=>1/(1+Math.exp(-x)),norm=a=>{const s=a.reduce((x,y)=>x+y,0);return a.map(x=>x/s)};
 function predict(Fp,I,V,ch,rtp,w){const k=Fp.length,rd=(rtp-.86)*10,p=[];for(let j=0;j<k;j++){const lf=Math.log(Fp[j]/(1-Fp[j])),mv=Math.log(Fp[j]/I[j]),ht=V[j]-Fp[j];const x=[lf,mv,ht,mv*ht,mv*ch,ht*lf,rd*lf];for(let s=0;s<k;s++)x.push(s===j?1:0);let z=0;x.forEach((v,i)=>z+=v*w[i]);p.push(sig(z))}return norm(p)}
 function mkey(sp,ty,k,bn){const S={축구:'soccer',야구:'baseball',농구:'basketball',배구:'volleyball'}[sp];if(!S||/홀짝|승N패|승\d패/.test(ty)||/전반|후반|이닝|쿼터|세트 /.test(bn||''))return null;let m=null;if(/승무패|승패/.test(ty)&&!/핸디/.test(ty))m='normal';else if(/핸디/.test(ty))m='handicap';else if(/언더오버/.test(ty))m='ou';return m?`${S}_${m}_${k}`:null}
+// 엑셀식 판정: 과거에 배당 무브가 비슷한 경기(ATLAS) / 무브+구매율이 비슷한 경기에서
+// 어떤 결과가 배당 기대보다 '유의미하게' 자주(또는 드물게) 나왔나. 10경기 이상, 이항검정 p<0.05.
+const LV=[['atlas','무브'],['atlasV','구매율']];
+function applySig(a,sim){
+  a.up=a.fo.map(()=>[]);a.dn=a.fo.map(()=>[]);
+  if(sim)for(const [lv,name] of LV){const s=sim[lv];if(!s||!s.n||s.n<10||!s.pu)continue;
+    s.pu.forEach((p,j)=>{if(p<0.05)a.up[j].push({lv,name,p,n:s.n,act:s.act[j],exp:s.exp[j]})});
+    s.pd.forEach((p,j)=>{if(p<0.05)a.dn[j].push({lv,name,p,n:s.n,act:s.act[j],exp:s.exp[j]})})}
+  a.mtags=a.tags.slice();a.mcls=a.cls;
+  a.tags=a.fo.map((_,j)=>a.up[j].length?'c':a.dn[j].length?'x':'');
+  a.cls=a.tags.includes('c')?'c':a.tags.includes('x')?'x':'';
+  a.best=a.up.map((u,j)=>[j,u.length?Math.min(...u.map(x=>x.p)):1]).sort((p,q)=>p[1]-q[1])[0][0];
+}
 function analyze(g){
   const three=g.o[1]>0,pk=a=>three?a:[a[0],a[2]];
   const fo=pk(g.o);let io=g.i?pk(g.i):fo.slice();if(io.some(x=>!(x>1)))io=fo.slice();
@@ -181,7 +194,7 @@ function draw(){
   document.getElementById('rmeta').innerHTML=`<b>${SN[R.saleStatus]||''}</b><br><span class="${stale?'stale':''}">${ago(DATA.updated)} 갱신</span>`;
   document.getElementById('rswitch').innerHTML=DATA.rounds.length>1?DATA.rounds.map((r,i)=>`<button aria-pressed="${i===RI}" data-i="${i}">${r.gmTs%10000}회차 ${SN[r.saleStatus]||''}</button>`).join(''):'';
   document.querySelectorAll('#filters .chip').forEach(b=>b.setAttribute('aria-pressed',b.dataset.sp!==undefined?String(F.sp===b.dataset.sp):String(!!F[b.dataset.t])));
-  const rows=R.games.map(g=>({g,a:analyze(g),sim:(AN[R.gmTs+':'+g.s]||{}).sim}));
+  const rows=R.games.map(g=>{const a=analyze(g),sim=(AN[R.gmTs+':'+g.s]||{}).sim;applySig(a,sim);return {g,a,sim}});
   // 경기(같은 시각·홈·원정)별로 묶기
   const M=new Map();for(const x of rows){const k=x.g.t+'|'+x.g.h+'|'+x.g.a;if(!M.has(k))M.set(k,{t:x.g.t,h:x.g.h,a:x.g.a,lg:x.g.lg,sp:x.g.sp,list:[]});M.get(k).list.push(x)}
   let matches=[...M.values()].map(m=>{m.list.sort((p,q)=>MORDER(p.g)-MORDER(q.g));m.cls=m.list.some(x=>x.a.cls==='c')?'c':m.list.some(x=>x.a.cls==='w')?'w':m.list.some(x=>x.a.cls==='x')?'x':'';m.moved=m.list.some(x=>x.g.c>0);m.past=m.t<=now;const sc=m.list.find(x=>x.g.sc&&x.g.res!=null);m.score=sc?sc.g.sc:'';return m}).sort((p,q)=>p.t-q.t);
@@ -194,17 +207,20 @@ function draw(){
 }
 function drawBrief(rows,R,now){
   const up=rows.filter(x=>x.g.t>now);
-  const n=k=>up.filter(x=>x.a.cls===k).length;
-  const picks=up.filter(x=>x.a.cls==='c'||x.a.cls==='w').sort((p,q)=>(p.a.cls===q.a.cls?0:p.a.cls==='c'?-1:1)||p.g.t-q.g.t).slice(0,8);
+  const items=[];for(const x of up)x.a.up.forEach((u,j)=>{if(u.length)items.push({x,j,u,p:Math.min(...u.map(v=>v.p))})});
+  items.sort((p,q)=>p.p-q.p);
+  const lows=[];for(const x of up)x.a.dn.forEach((u,j)=>{if(u.length)lows.push({x,j,u,p:Math.min(...u.map(v=>v.p))})});lows.sort((p,q)=>p.p-q.p);
   const moves=up.filter(x=>x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,6);
-  let h=`<h2>남은 경기 판독</h2><div class="counts"><span><b style="color:var(--felt)">${n('c')}</b>후보</span><span><b style="color:var(--amber)">${n('w')}</b>관심</span><span><b style="color:var(--brick)">${n('x')}</b>피하기</span><span><b>${up.length}</b>시장</span></div>`;
-  h+=`<h3>지금 볼 경기</h3>`;
-  h+=picks.length?picks.map(x=>{const j=x.a.best;
-    return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}</small></span><span class="s"><b style="color:${x.a.cls==='c'?'var(--felt)':'var(--amber)'}">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>모델 ${sgn(x.a.E[j])}%p</small>${x.sim&&x.sim.fin&&x.sim.fin.n?`<small>과거 ${sgn(x.sim.fin.act[j]-x.sim.fin.exp[j])}%p</small>`:''}</span></button>`}).join(''):'<div class="none">지금은 후보나 관심 경기가 없어요.</div>';
+  const why=u=>u.map(v=>`${v.name} ${v.act.toFixed(0)}% (기대 ${v.exp.toFixed(0)}%, ${v.n}경기)`).join('<br>');
+  let h=`<h2>남은 경기에서 과거 패턴</h2><div class="counts"><span><b style="color:var(--felt)">${items.length}</b>자주 나온 결과</span><span><b style="color:var(--brick)">${lows.length}</b>드물게 나온 결과</span><span><b>${up.length}</b>시장</span></div>`;
+  h+=`<h3>비슷한 배당 무브·구매율에서 유의미하게 자주 나온 결과</h3>`;
+  h+=items.length?items.slice(0,12).map(({x,j,u})=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}${x.g.ln&&(x.a.isH||x.a.isO)?' '+x.g.ln:''}${x.g.c?', 배당 '+x.g.c+'번 변경':', 배당 변동 없음'}</small></span><span class="s"><b style="color:var(--felt)">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>${why(u)}</small></span></button>`).join(''):'<div class="none">지금은 유의미한 패턴이 나온 경기가 없어요.</div>';
+  if(lows.length)h+=`<h3>유의미하게 드물게 나온 결과</h3>`+lows.slice(0,6).map(({x,j,u})=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)}</small></span><span class="s"><b style="color:var(--brick)">${x.a.lab[j]} ${x.a.fo[j].toFixed(2)}</b><small>${why(u)}</small></span></button>`).join('');
   h+=`<h3>최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
     const mv=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
     return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(dtmMs(x.g.lc))}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)} ${mv}</small></span><span class="s"><small>경기 ${hhmm(x.g.t)}</small></span></button>`}).join(''):'<div class="none">최근 90분 동안 바뀐 배당이 없어요.</div>';
+  h+=`<div class="none" style="font-size:12px;padding-top:10px">기준: 과거 10경기 이상, 배당 기대보다 많이(적게) 나온 게 우연일 확률 5% 미만. 시장이 수백 개라 이 중 일부는 우연으로도 걸려요.</div>`;
   document.getElementById('brief').innerHTML=h;
 }
 function matchHTML(m){
@@ -214,7 +230,7 @@ const isExtra=x=>!x.a.cls&&x.a.cls!==''&&(/홀짝/.test(x.g.ty)||/전반|후반/
 function rowHTML(x,m,extra){
   const {g,a}=x,k=a.fo.length;
   const line=(a.isH||a.isO)&&g.ln!==0?`<small>${a.isH&&g.ln>0?'+':''}${g.ln}</small>`:'';
-  const vlab=a.cls==='c'||a.cls==='w'?`<span class="verdict ${a.cls}">${a.lab[a.best]} ${a.cls==='c'?'후보':'관심'}</span>`:a.cls==='x'?`<span class="verdict x">${a.lab.filter((_,j)=>a.tags[j]==='x').join('·')} 피하기</span>`:'';
+  const vlab=a.cls==='c'?`<span class="verdict c">${a.lab.filter((_,j)=>a.tags[j]==='c').join('·')} 자주</span>`:a.cls==='x'?`<span class="verdict x">${a.lab.filter((_,j)=>a.tags[j]==='x').join('·')} 드묾</span>`:'';
   const cells=a.fo.map((o,j)=>{const d=o-a.io[j];const mv=Math.abs(d)>=.005?`<div class="mv ${d<0?'dn':'up'}">${d<0?'▼':'▲'} ${a.io[j].toFixed(2)}</div>`:'<div class="mv"></div>';
     return `<div class="cell ${a.tags[j]}"><div class="sl">${a.lab[j]}</div><div class="od">${o.toFixed(2)}</div>${mv}<div class="vt">${a.V?'구매 '+Math.round(a.V[j]*100)+'%':''}</div></div>`}).join('');
   return `<div class="mrow ${extra} ${OPEN.has(g.s)?'open':''}" role="button" tabindex="0" aria-expanded="${OPEN.has(g.s)}" data-s="${g.s}" style="--k:${k}"><div class="mlab">${marketName(g)}${line}${vlab?'<div>'+vlab+'</div>':''}</div>${cells}<div class="det">${detHTML(x)}</div></div>`}
@@ -235,13 +251,13 @@ function simBlock(title,desc,s,a){
   if(!s.n)return `<h4>${title}</h4><div class="note">${desc} · 비슷한 경기가 없어요.</div>`;
   const ok=j=>s.dA&&s.dB&&s.nA>=10&&s.nB>=10&&Math.sign(s.dA[j])===Math.sign(s.dB[j])&&Math.abs(s.act[j]-s.exp[j])>=1;
   return `<h4>${title} <span style="font-weight:500;color:var(--mute)">${s.n.toLocaleString()}경기</span>${s.n<30?' <span class="few">표본 적음</span>':''}</h4><div class="note" style="margin-top:-4px">${desc} · ~2022 ${s.nA}, 2023~ ${s.nB}</div>
-  <table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>실제</td>${s.act.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>배당 기대</td>${s.exp.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>차이</td>${s.act.map((v,j)=>{const d=v-s.exp[j];return `<td class="${ok(j)?(d>0?'pos':'neg'):''}">${sgn(d)}${ok(j)?'*':''}</td>`}).join('')}</tr></table>`}
+  <table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>실제</td>${s.act.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>배당 기대</td>${s.exp.map(v=>`<td>${v.toFixed(1)}%</td>`).join('')}</tr><tr><td>차이</td>${s.act.map((v,j)=>{const d=v-s.exp[j];return `<td class="${ok(j)?(d>0?'pos':'neg'):''}">${sgn(d)}${ok(j)?'*':''}</td>`}).join('')}</tr>${s.pu?`<tr><td>우연일 확률</td>${s.pu.map((q,j)=>{const v=s.act[j]>=s.exp[j]?q:s.pd[j];const sg=v<0.05&&s.n>=10;return `<td class="${sg?(s.act[j]>=s.exp[j]?'pos':'neg'):''}">${v<0.001?'<0.1':(v*100).toFixed(v<0.1?1:0)}%</td>`}).join('')}</tr>`:''}</table>`}
 function detHTML(x){
   const {g,a,sim}=x;let h='<h4>배당 흐름</h4>'+flowSVG(g,a);
-  h+='<h4>모델</h4>'+(a.P?`<table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>배당 확률</td>${a.Fp.map(v=>`<td>${(v*100).toFixed(1)}%</td>`).join('')}</tr><tr><td>모델 확률</td>${a.P.map(v=>`<td>${(v*100).toFixed(1)}%</td>`).join('')}</tr><tr><td>우위</td>${a.E.map((e,j)=>`<td class="${a.tags[j]==='x'?'neg':a.tags[j]?'pos':''}">${sgn(e)}</td>`).join('')}</tr></table><div class="note">환급률 ${(a.rtp*100).toFixed(1)}%</div>`:`<div class="note">이 시장은 모델이 배당보다 나은 예측을 하지 못해서 판정하지 않아요. 환급률 ${(a.rtp*100).toFixed(1)}%</div>`);
   if(sim){const t=a.three?'2':'1.5',v=a.three?'10':'7';
-    h+=simBlock('과거 비슷한 경기 · 최종 배당','최종 배당 확률 ±1%p',sim.fin,a)+simBlock('과거 비슷한 경기 · ATLAS',`초기·최종 ±${t}%p, 움직임 방향과 변경 여부 일치`,sim.atlas,a)+simBlock('과거 비슷한 경기 · ATLAS + 구매율',`ATLAS에 구매율 ±${v}%p`,sim.atlasV,a);
-    h+='<div class="note" style="margin-top:8px">같은 시장·같은 기준점, 직전 회차까지의 경기만 비교해요. *는 두 기간 모두 같은 방향. 참고용이며 판정은 모델 기준이에요.</div>'}
+    h+=simBlock('비슷한 배당 무브',`초기·최종 확률 ±${t}%p, 움직임 방향과 변경 여부 일치`,sim.atlas,a)+simBlock('무브 + 구매율',`무브에 구매율 ±${v}%p`,sim.atlasV,a)+simBlock('최종 배당만',`최종 배당 확률 ±1%p`,sim.fin,a);
+    h+='<div class="note" style="margin-top:8px">같은 시장·같은 기준점, 직전 회차까지의 경기만 비교해요. 초록·빨강 숫자는 10경기 이상이고 우연일 확률 5% 미만인 결과, *는 두 기간 모두 같은 방향.</div>'}
+  h+='<h4>참고: 정배 보정 모델</h4>'+(a.P?`<table><tr><th></th>${a.lab.map(l=>`<th>${l}</th>`).join('')}</tr><tr><td>배당 확률</td>${a.Fp.map(v=>`<td>${(v*100).toFixed(1)}%</td>`).join('')}</tr><tr><td>모델 확률</td>${a.P.map(v=>`<td>${(v*100).toFixed(1)}%</td>`).join('')}</tr><tr><td>우위</td>${a.E.map((e,j)=>`<td class="${a.mtags[j]==='x'?'neg':a.mtags[j]?'pos':''}">${sgn(e)}</td>`).join('')}</tr></table><div class="note">환급률 ${(a.rtp*100).toFixed(1)}%</div>`:`<div class="note">이 시장은 모델이 배당보다 나은 예측을 하지 못해서 판정하지 않아요. 환급률 ${(a.rtp*100).toFixed(1)}%</div>`);
   return h}
 document.getElementById('rswitch').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;RI=+b.dataset.i;draw()});
 document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;if(b.dataset.sp!==undefined)F.sp=b.dataset.sp;else F[b.dataset.t]=!F[b.dataset.t];store.set('lens.f2',F);draw()});
