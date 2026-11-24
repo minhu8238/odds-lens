@@ -58,5 +58,29 @@ async function post(p, body) {
     if (added) fs.writeFileSync(f, JSON.stringify(H));
     console.log(`${r.gmTs} ${r.saleStatus} 경기 ${r.games.length}, 기록 추가 ${added}`);
   }
+  // 끝난 경기를 과거 데이터(history_new)에 자동 추가: 날짜,최종배당k,초기배당k,구매율k,변경횟수,결과칸
+  const { marketKey } = require('./model.js');
+  const newDir = path.join(dataDir, 'history_new');
+  fs.mkdirSync(newDir, { recursive: true });
+  const seenF = path.join(newDir, 'seen.txt');
+  const seen = new Set(fs.existsSync(seenF) ? fs.readFileSync(seenF, 'utf8').split('\n').filter(Boolean) : []);
+  const RES = { '0': 0, '1': 1, '2': 2 };
+  let appended = 0;
+  for (const r of snap.rounds) for (const g of r.games) {
+    const id = `${r.gmTs}:${g.s}`;
+    if (seen.has(id) || !(g.res in RES) || g.t > snap.updated) continue;
+    const three = g.o[1] > 0, pk = a => three ? a : [a[0], a[2]];
+    const key = marketKey(g.sp, g.ty, three ? 3 : 2);
+    let ri = RES[g.res]; if (!three) ri = ri === 2 ? 1 : ri === 0 ? 0 : -1;
+    seen.add(id);
+    if (!key || ri < 0) continue;
+    const kst = new Date(g.t + 9 * 3600e3), dt = kst.toISOString().slice(0, 10).replace(/-/g, '');
+    const o = pk(g.o), i = g.i ? pk(g.i) : o, v = g.v ? pk(g.v) : null, vs = v ? v.reduce((a, b) => a + b, 0) : 0;
+    const row = [dt, ...o.map(x => x.toFixed(2)), ...i.map(x => x > 1 ? x.toFixed(2) : ''), ...(vs > 50 ? v.map(x => (x / vs * 100).toFixed(1)) : o.map(() => '')), g.c || 0, ri];
+    fs.appendFileSync(path.join(newDir, key + '.csv'), row.join(',') + '\n');
+    appended++;
+  }
+  fs.writeFileSync(seenF, [...seen].join('\n') + '\n');
+  console.log('끝난 경기 과거 데이터에 추가', appended);
   console.log('요청 수', calls);
 })().catch(e => { console.error('실패:', e.message); process.exit(1) });
