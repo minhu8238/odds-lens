@@ -171,7 +171,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
-  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-25 23:00 · 가장 좁힌 조건 3경기 이상 100%면 보통</div>
+  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-25 23:05 · 축구·농구 일반·핸디는 일반+핸디 짝 우선</div>
     배트맨 공식 데이터를 받아와 시트 방식으로 자동 분석해요. 직전 회차까지의 일반+핸디 과거 경기에서 조건이 같은 경기를 찾고, 30경기 미만이면 <b>적음</b>을 붙여요. 시장 줄을 누르면 배당 흐름이 열려요.
   </div>
 </div>
@@ -451,15 +451,15 @@ function mVerdict(g,sources){const v=mVerdict0(g,sources);if(v.pend)return v;con
   const x={lab:nb.lab,j:nb.sd.j,wact:100,wexp:nb.sd.exp,wres:100-nb.sd.exp,med:nb.n,max:nb.n,tot:1,pos:1,big:{n:nb.n,s:nb.sd}};
   return {g,best:{x,name:nb.name},narrow:nb,other:v.none?null:{x:v.best.x,name:v.best.name},sc:0,pend:false,grade:['보통','var(--amber)']}}
 function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
-  const bk=N.sp==='농구',pnm=p=>'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝';
-  // 농구 일반은 일반+핸디 짝(기준점 이동까지 같은 경기)을 우선, 없을 때만 단독·언오 짝
+  const bk=N.sp==='농구'||N.sp==='축구',pnm=p=>'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝';
+  // 농구·축구 일반은 일반+핸디 짝을 우선(주류), 짝에서 기운 쪽이 없을 때만 단독·언오 짝
   const nAll=[{A:SALL1[N.s],m:'N',name:'일반 단독'},...ps.map(p=>({A:SALL[p.key],m:'N',name:pnm(p)}))];
   const pri=(prim,rest,g)=>{const v=mVerdict(g,prim);return v.none&&!v.pend?Object.assign(mVerdict(g,rest),{fb:1}):v};
   const out=[bk?pri(ps.filter(p=>!isOU(p.H)).map(p=>({A:SALL[p.key],m:'N',name:pnm(p)})),nAll,N):mVerdict(N,nAll)];
   for(const p of ps){const srcS={A:SALL1[p.H.s],m:'N',name:SGLN(p.H)},srcP={A:SALL[p.key],m:'H',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'};
     // 농구·배구 언더오버는 언오 단독 시장을 우선: 단독에서 기운 쪽이 있으면 그걸로, 없을 때만 짝 분석
     if(isOU(p.H)&&/농구|배구/.test(p.H.sp||N.sp)){const v=mVerdict(p.H,[srcS]);out.push(v.none&&!v.pend?Object.assign(mVerdict(p.H,[srcP]),{fb:1}):Object.assign(v,{ouS:1}))}
-    else if(bk&&!isOU(p.H))out.push(pri([srcP],[srcS],p.H)); // 농구 핸디는 일반+핸디 짝 우선
+    else if(bk&&!isOU(p.H))out.push(pri([srcP],[srcS],p.H)); // 농구·축구 핸디는 일반+핸디 짝 우선
     else out.push(mVerdict(p.H,[srcS,srcP]))}
   return out}
 const VMK=g=>MKIND(g)==='normal'?'일반':MKN(isOU(g))+' '+LNS(g);
