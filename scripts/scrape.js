@@ -114,7 +114,8 @@ async function post(p, body) {
       }
     }
   };
-  for (const r of snap.rounds) { addRound(r); addPairs(r) }
+  const { roundOU } = require('./build_oupair');
+  for (const r of snap.rounds) { addRound(r); addPairs(r); roundOU(path.join(newDir, String(r.gmTs))) }
   // 빠진 회차 메우기: 기존 데이터 마지막 회차(135)부터 현재 회차 직전까지, 결과가 다 나온 회차는 완료 표시
   const bfF = path.join(newDir, 'backfill.txt');
   let done = fs.existsSync(bfF) ? +fs.readFileSync(bfF, 'utf8').trim() : 260134;
@@ -124,7 +125,7 @@ async function post(p, body) {
     const raw = await post('/buyPsblGame/gameInfoInq.do', { gmId: 'G101', gmTs: String(ts), gameYear: String(2000 + yy), _sbmInfo: { debugMode: 'false' } });
     if (!raw || !raw.compSchedules) { if (ts % 10000 > 0) done = ts; continue }
     const r = shape(raw, ts, raw.currentLottery && raw.currentLottery.saleStatus);
-    addRound(r); addPairs(r);
+    addRound(r); addPairs(r); roundOU(path.join(newDir, String(ts)));
     const pending = r.games.filter(g => !(g.res in RES) && g.t > snap.updated - 3 * 86400e3).length;
     console.log(`메우기 ${ts}: 경기 ${r.games.length}, 결과 대기 ${pending}`);
     if (pending === 0 && done === ts - 1) done = ts;

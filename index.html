@@ -321,16 +321,16 @@ function sheetFind(rows,N,H,c,round){
 function sheetRun(rows,N,H,c,round){const r=sheetFind(rows,N,H,c,round);r.step='';
   r.fun=[sheetFind(rows,N,H,Object.assign({},c,{nmv:0,hmv:0,nv:0,hv:0,nch:0,hch:0}),round).n,(c.nmv||c.hmv)?sheetFind(rows,N,H,Object.assign({},c,{nv:0,hv:0,nch:0,hch:0}),round).n:null];
   if(c.auto&&!(c.nch&&c.hch)&&r.n>=SAUTO){const r2=sheetFind(rows,N,H,Object.assign({},c,{nch:1,hch:1}),round);
-    if(r2.n>0){r2.step='cnt';r2.base=r.n;return r2}r.step='cnt0'}
+    if(r2.n>0){r2.step='cnt';r2.base=r.n;r2.fun=r.fun;return r2}r.step='cnt0'}
   return r}
 function sheetPairs(R){const by={},out=[];for(const g of R.games){if(/전반|후반/.test(g.bn||''))continue;(by[g.t+'|'+g.h+'|'+g.a]=by[g.t+'|'+g.h+'|'+g.a]||[]).push(g)}
-  for(const L of Object.values(by)){const N=L.find(g=>/^(승무패|일반 승패|승패)$/.test(g.ty));if(!N||!SPE[N.sp])continue;for(const H of L.filter(g=>/핸디/.test(g.ty)))out.push({N,H,key:N.s+':'+H.s})}return out}
+  for(const L of Object.values(by)){const N=L.find(g=>/^(승무패|일반 승패|승패)$/.test(g.ty));if(!N||!SPE[N.sp])continue;for(const H of L.filter(g=>/핸디|언더오버/.test(g.ty)))out.push({N,H,key:N.s+':'+H.s})}return out}
 let SKEY='';
 async function computeSheet(R){computeAll(R);const key=R.gmTs+':'+DATA.updated+':'+JSON.stringify(SCOND);if(SKEY===key)return;SKEY=key;
-  for(const pr of sheetPairs(R)){let rows;try{rows=await loadPairs(SPE[pr.N.sp])}catch(e){continue}
+  for(const pr of sheetPairs(R)){let rows;try{rows=await loadPairs(PKEY(pr))}catch(e){continue}
     const r=sheetRun(rows,pr.N,pr.H,SCOND,R.gmTs);
     const all=[...r.N.map(s=>({m:'N',s})),...r.H.map(s=>({m:'H',s}))].filter(x=>x.s.res>0).sort((a,b)=>b.s.res-a.s.res);
-    SRES[pr.key]=Object.assign(r,{best:r.n?all[0]||null:null,N0:pr.N,H0:pr.H})}
+    SRES[pr.key]=Object.assign(r,{isO:isOU(pr.H),best:r.n?all[0]||null:null,N0:pr.N,H0:pr.H})}
   if(DATA.rounds[RI]===R)draw()}
 // ── 모든 조합 자동 비교: 시트 조건 조합 216개를 전부 돌려서 결과 방향이 얼마나 일관된지 셈
 const SALL={};let SAKEY='';
@@ -340,19 +340,19 @@ function sheetCombos(n3,h3,hasV){const out=[];
     out.push({c:{tol,nf:wl,hf:wl,ni:iw,hi:iw,hli,hlf:1,nmv:chg==='mv'?1:0,hmv:chg==='mv'?1:0,nch:chg==='cnt'?1:0,hch:chg==='cnt'?1:0,nv:vote!=='none'?1:0,hv:vote==='nh'?1:0,auto:0},
       lab:[`±${tol.toFixed(2)}`,fin==='all'?'최종 전부':'최종 승패',ini?'초기 승패':'',chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote==='n'?'구매율 일반':vote==='nh'?'구매율 일반+핸디':'',hli?'핸디 초기선':''].filter(Boolean).join(' · ')})}
   return out}
-function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0;
+function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0,isO=isOU(H);
   const sub=rows.filter(x=>(!x.rd||x.rd<round)&&x.ln===(H.ln||0)&&Math.abs(x.nf[0]-N.o[0])<=e&&Math.abs(x.nf[2]-N.o[2])<=e&&Math.abs(x.hf[0]-H.o[0])<=e&&Math.abs(x.hf[2]-H.o[2])<=e);
   const vs=v=>v&&v.reduce((a,b)=>a+b,0)>50,hasV=vs(N.v);
   const list=sheetCombos(n3,h3,hasV).map(({c,lab})=>{const r=sheetFind(sub,N,H,c,round);return {lab,n:r.n,N:r.N,H:r.H}});
   const sum=[];for(const m of ['N','H'])for(const s0 of list[0][m]){const cs=list.filter(x=>x.n>0).map(x=>({n:x.n,s:x[m].find(q=>q.j===s0.j)}));
     const ns=cs.map(x=>x.n).sort((a,b)=>a-b);
-    sum.push({m,j:s0.j,lab:(m==='N'?NLAB(n3):HLAB(h3))[s0.j],tot:cs.length,pos:cs.filter(x=>x.s.res>0).length,
+    sum.push({m,j:s0.j,lab:(m==='N'?NLAB(n3):HLAB(h3,isO))[s0.j],tot:cs.length,pos:cs.filter(x=>x.s.res>0).length,
       act:cs.length?cs.reduce((a,x)=>a+x.s.act,0)/cs.length:0,exp:cs.length?cs.reduce((a,x)=>a+x.s.exp,0)/cs.length:0,
       roi:cs.length?cs.reduce((a,x)=>a+x.s.roi,0)/cs.length:0,med:ns.length?ns[ns.length>>1]:0,max:ns.length?ns[ns.length-1]:0})}
   const best=sum.filter(x=>x.tot&&x.pos/x.tot>0.5).sort((a,b)=>(b.pos/b.tot-a.pos/a.tot)||(b.med-a.med))[0]||null;
-  return {list,sum,best,total:list.length,n3,h3,N0:N,H0:H}}
+  return {list,sum,best,total:list.length,n3,h3,isO,N0:N,H0:H}}
 async function computeAll(R){const key=R.gmTs+':'+DATA.updated;if(SAKEY===key)return;SAKEY=key;
-  for(const pr of sheetPairs(R)){if(SAKEY!==key)return;let rows;try{rows=await loadPairs(SPE[pr.N.sp])}catch(e){continue}
+  for(const pr of sheetPairs(R)){if(SAKEY!==key)return;let rows;try{rows=await loadPairs(PKEY(pr))}catch(e){continue}
     SALL[pr.key]=sheetAll(rows,pr.N,pr.H,R.gmTs);await new Promise(r=>setTimeout(r,0))}
   if(DATA.rounds[RI]===R)draw()}
 const SAOPEN=new Set();
@@ -362,38 +362,40 @@ function allBox(key){const A=SALL[key];if(!A)return '<div class="allc"><div clas
   if(!used)return h+'<div class="none" style="font-size:12px">어떤 조합에도 맞는 과거 경기가 없어요.</div></div>';
   h+=A.sum.map(x=>{const sh=x.tot?x.pos/x.tot:0;return `<div class="arow ${sh>=0.7?'c':sh<=0.3?'x':''}"><span class="al">${x.lab}</span><span class="ab"><i style="width:${(sh*100).toFixed(0)}%"></i></span><span class="av"><b>${x.pos}/${x.tot}</b> 조합에서 기대 이상<small>평균 ${x.act.toFixed(0)}% (기대 ${x.exp.toFixed(0)}) · 수익 ${x.roi>0?'+':''}${x.roi.toFixed(0)}% · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small></span></div>`}).join('');
   const op=SAOPEN.has(key);h+=`<button class="copen" data-aopen="${key}">${op?'조합 목록 닫기':'조합별 결과 보기'}</button>`;
-  if(op){const labs=[...A.N0?NLAB(A.n3).map((l,j)=>({m:'N',j,l})).filter(x=>x.l):[],...HLAB(A.h3).map((l,j)=>({m:'H',j,l})).filter(x=>x.l)];
+  if(op){const labs=[...A.N0?NLAB(A.n3).map((l,j)=>({m:'N',j,l})).filter(x=>x.l):[],...HLAB(A.h3,A.isO).map((l,j)=>({m:'H',j,l})).filter(x=>x.l)];
     h+=`<div class="atbl"><table><tr><th>조합</th><th>경기</th>${labs.map(x=>`<th>${x.l}</th>`).join('')}</tr>${A.list.filter(x=>x.n>0).sort((a,b)=>b.n-a.n).map(x=>`<tr><td>${x.lab}</td><td>${x.n}</td>${labs.map(l=>{const s=x[l.m].find(q=>q.j===l.j);return `<td class="${s.res>0?'pos':s.res<0?'neg':''}">${s.act.toFixed(0)}</td>`}).join('')}</tr>`).join('')}</table></div>`}
   return h+'</div>'}
-const NLAB=t=>t?['승','무','패']:['승','','패'],HLAB=t=>t?['핸승','핸무','핸패']:['핸승','','핸패'];
+const NLAB=t=>t?['승','무','패']:['승','','패'],HLAB=(t,o)=>o?['언더','','오버']:t?['핸승','핸무','핸패']:['핸승','','핸패'];
+const isOU=g=>/언더오버/.test(g.ty),MKN=o=>o?'언오':'핸디',LNS=(g)=>isOU(g)?`${g.ln}`:`${g.ln>0?'+':''}${g.ln}`;
+const PKEY=pr=>(isOU(pr.H)?'ou_':'')+SPE[pr.N.sp];
 function sheetCards(r){const card=(s,lab,fo)=>`<div class="pc ${s.res>0?'c':s.res<0&&r.n?'x':''}"><span>${lab}</span><b>${r.n?s.act.toFixed(0)+'%':'–'}</b><small>기대 ${r.n?s.exp.toFixed(0):'–'} · 수익 ${r.n?(s.roi>0?'+':'')+s.roi.toFixed(0)+'%':'–'}</small></div>`;
-  return `<div class="pl" style="--k:${r.N.length}">${r.N.map(s=>card(s,NLAB(r.n3)[s.j])).join('')}</div><div class="pl" style="--k:${r.H.length}">${r.H.map(s=>card(s,HLAB(r.h3)[s.j])).join('')}</div>`}
-function condChips(N,H){const c=SCOND,n3=N.o[1]>0,h3=H.o[1]>0,Ni=N.i&&N.i[0]>1?N.i:N.o,Hi=H.i&&H.i[0]>1?H.i:H.o;
+  return `<div class="pl" style="--k:${r.N.length}">${r.N.map(s=>card(s,NLAB(r.n3)[s.j])).join('')}</div><div class="pl" style="--k:${r.H.length}">${r.H.map(s=>card(s,HLAB(r.h3,r.isO)[s.j])).join('')}</div>`}
+function condChips(N,H){const o=isOU(H),c=SCOND,n3=N.o[1]>0,h3=H.o[1]>0,Ni=N.i&&N.i[0]>1?N.i:N.o,Hi=H.i&&H.i[0]>1?H.i:H.o;
   const b=(k,j,label)=>{const on=j==null?!!c[k]:!!c[k][j];return `<button data-sc="${k}" ${j!=null?`data-j="${j}"`:''} aria-pressed="${on}">${label}</button>`};
   const sl=(t)=>t?[0,1,2]:[0,2];
   return `<div class="cflt"><span>폭</span>${[0.03,0.06,0.1].map(v=>`<button data-tol="${v}" aria-pressed="${c.tol===v}">±${v.toFixed(2)}</button>`).join('')}</div>
   <div class="cflt"><span>일반 초기</span>${sl(n3).map(j=>b('ni',j,`${NLAB(n3)[j]} ${Ni[j].toFixed(2)}`)).join('')}</div>
   <div class="cflt"><span>일반 최종</span>${sl(n3).map(j=>b('nf',j,`${NLAB(n3)[j]} ${N.o[j].toFixed(2)}`)).join('')}${b('nmv',null,(N.c||0)>0?'변경 있음':'변경 없음')}${b('nv',null,'구매율')}${b('nch',null,`변경 ${N.c||0}회`)}</div>
-  <div class="cflt"><span>핸디</span>${b('hli',null,`초기 ${H.il!=null?H.il:H.ln}`)}${b('hlf',null,`최종 ${H.ln}`)}${b('hmv',null,(H.c||0)>0?'변경 있음':'변경 없음')}${b('hv',null,'구매율')}${b('hch',null,`변경 ${H.c||0}회`)}</div>
-  <div class="cflt"><span>핸디 초기</span>${sl(h3).map(j=>b('hi',j,`${HLAB(h3)[j]} ${Hi[j].toFixed(2)}`)).join('')}</div>
-  <div class="cflt"><span>핸디 최종</span>${sl(h3).map(j=>b('hf',j,`${HLAB(h3)[j]} ${H.o[j].toFixed(2)}`)).join('')}</div>
+  <div class="cflt"><span>${MKN(o)}</span>${b('hli',null,`초기 ${H.il!=null?H.il:H.ln}`)}${b('hlf',null,`최종 ${H.ln}`)}${b('hmv',null,(H.c||0)>0?'변경 있음':'변경 없음')}${b('hv',null,'구매율')}${b('hch',null,`변경 ${H.c||0}회`)}</div>
+  <div class="cflt"><span>${MKN(o)} 초기</span>${sl(h3).map(j=>b('hi',j,`${HLAB(h3,o)[j]} ${Hi[j].toFixed(2)}`)).join('')}</div>
+  <div class="cflt"><span>${MKN(o)} 최종</span>${sl(h3).map(j=>b('hf',j,`${HLAB(h3,o)[j]} ${H.o[j].toFixed(2)}`)).join('')}</div>
   <div class="cflt"><span>자동</span>${b('auto',null,`${SAUTO}경기 이상이면 변경 횟수까지`)}<button data-scr="1">기본 조건으로</button></div>`}
 function sheetSteps(r){const c=SCOND,f=r.fun||[],a=[`최종 배당 ${f[0]??'-'}`];if(c.nmv||c.hmv)a.push(`변경 유무 ${f[1]??'-'}`);
   if(c.nv||c.hv)a.push(r.nvUsed||r.hvUsed?`구매율 ${r.base??r.n}`:'구매율(아직 없음, 건너뜀)');
   if(r.step==='cnt')a.push(`변경 횟수 ${r.n}`);else if(c.nch||c.hch)a.push('변경 횟수');else if(r.step==='cnt0')a.push('변경 횟수 맞는 경기 0이라 생략');
   return a.join(' → ')}
 function sheetBox(m){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)return '';
-  return m.list.filter(x=>marketName(x.g)==='핸디캡').map(h=>{const key=nrow.g.s+':'+h.g.s,r=SRES[key];const ln=`${h.g.ln>0?'+':''}${h.g.ln}`;
-    if(!r)return `<div class="sbox"><div class="ph">시트 분석 · 일반 + 핸디 ${ln}</div><div class="none">찾는 중…</div>${allBox(key)}</div>`;
+  return m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(h=>{const key=nrow.g.s+':'+h.g.s,r=SRES[key];const ln=MKN(isOU(h.g))+' '+LNS(h.g);
+    if(!r)return `<div class="sbox"><div class="ph">시트 분석 · 일반 + ${ln}</div><div class="none">찾는 중…</div>${allBox(key)}</div>`;
     const open=SOPEN.has(key);
-    let html=`<div class="sbox" data-skey="${key}"><div class="ph">시트 분석 · 일반 + 핸디 ${ln} <b>${r.n}경기</b>${r.n&&r.n<30?' <span class="few">적음</span>':''}</div><div class="none" style="font-size:12px;padding:0 0 6px">${sheetSteps(r)}</div>${allBox(key)}${r.n?sheetCards(r):'<div class="none">조건에 맞는 과거 경기가 없어요. 조건을 줄여 보세요.</div>'}
+    let html=`<div class="sbox" data-skey="${key}"><div class="ph">시트 분석 · 일반 + ${ln} <b>${r.n}경기</b>${r.n&&r.n<30?' <span class="few">적음</span>':''}</div><div class="none" style="font-size:12px;padding:0 0 6px">${sheetSteps(r)}</div>${allBox(key)}${r.n?sheetCards(r):'<div class="none">조건에 맞는 과거 경기가 없어요. 조건을 줄여 보세요.</div>'}
       <button class="copen" data-sopen>${open?'조건·목록 닫기':'조건 바꾸기 · 경기 목록'}</button>`;
     if(open){html+=condChips(r.N0,r.H0);
       const pk=(a,t)=>t?a:[a[0],a[2]];const od=(f,i,t)=>pk(f,t).map((v,k)=>{const iv=pk(i,t)[k];return `<span class="o">${Math.abs(v-iv)>=0.005&&iv>1?`<span class="ch">${iv.toFixed(2)}→</span>`:''}${v.toFixed(2)}</span>`}).join('');
       const idx=(q,t)=>t?q:(q===2?1:0);
       html+=`<div class="clist">${r.list.slice(0,50).map(x=>{const d=x.dt;return `<div class="crow"><div class="c1"><span class="cd">${d.slice(2,4)}.${d.slice(4,6)}.${d.slice(6,8)}</span> ${esc(x.lg)} <b>${esc(x.h)}</b> ${esc(x.sc)} <b>${esc(x.a)}</b></div>
         <div class="c2"><span class="mk">일반</span><span class="ov">${od(x.nf,x.ni,r.n3)}</span><span class="vp">변경 ${x.nch}</span><span class="rs r${idx(x.r1,r.n3)}${r.n3?'':'2'}">${(r.n3?['승','무','패']:['승','패'])[idx(x.r1,r.n3)]}</span></div>
-        <div class="c2"><span class="mk">${x.ihc!==x.ln?x.ihc+'→':''}${x.ln}</span><span class="ov">${od(x.hf,x.hi,r.h3)}</span><span class="vp">변경 ${x.hch}</span><span class="rs r${idx(x.r2,r.h3)}${r.h3?'':'2'}">${(r.h3?['핸승','핸무','핸패']:['핸승','핸패'])[idx(x.r2,r.h3)]}</span></div></div>`}).join('')}</div>${r.n>50?`<div class="note">최근 50경기만 보여요 (전체 ${r.n})</div>`:''}`}
+        <div class="c2"><span class="mk">${x.ihc!==x.ln?x.ihc+'→':''}${x.ln}</span><span class="ov">${od(x.hf,x.hi,r.h3)}</span><span class="vp">변경 ${x.hch}</span><span class="rs r${idx(x.r2,r.h3)}${r.h3?'':'2'}">${(r.isO?['언더','오버']:r.h3?['핸승','핸무','핸패']:['핸승','핸패'])[idx(x.r2,r.h3)]}</span></div></div>`}).join('')}</div>${r.n>50?`<div class="note">최근 50경기만 보여요 (전체 ${r.n})</div>`:''}`}
     return html+'</div>'}).join('')}
 function drawBrief(rows,R,now){
   const up=rows.filter(x=>x.g.t>now&&x.a.at);
@@ -404,12 +406,12 @@ function drawBrief(rows,R,now){
   const moves=rows.filter(x=>x.g.t>now&&x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,6);
   const sp=sheetPairs(R).map(pr=>({pr,r:SRES[pr.key]})).filter(x=>x.r&&x.r.best&&x.pr.N.t>now).sort((a,b)=>((b.r.n>=3)-(a.r.n>=3))||(b.r.best.s.res-a.r.best.s.res));
   let h=`<h2>시트 방식 자동 분석</h2><div class="counts"><span><b>${sp.length}</b>경기</span><span style="flex:1"></span></div><div class="none" style="font-size:12px;padding:2px 0 4px">기본 순서: 일반·핸디 최종 승·패 배당 ±${SCOND.tol.toFixed(2)} (핸디 기준점 같음) → 일반·핸디 변경 유무 → ${SAUTO}경기 이상 남으면 변경 횟수까지. 구매율은 경기 블록에서 켜서 비교할 수 있어요. 경기 블록에서 조건을 바꾸면 전체에 같이 적용돼요.</div>`;
-  h+=sp.length?sp.slice(0,15).map(({pr,r})=>{const b=r.best,g=b.m==='N'?pr.N:pr.H,lab=(b.m==='N'?NLAB(r.n3):HLAB(r.h3))[b.s.j];
-    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} 핸디 ${pr.H.ln}</small></span><span class="s"><b style="color:var(--felt)">${lab} ${g.o[b.s.j].toFixed(2)}</b><small>${r.n}경기${r.n<30?' <span class="few">적음</span>':''} ${b.s.act.toFixed(0)}% (기대 ${b.s.exp.toFixed(0)}%)</small><small>수익 ${b.s.roi>0?'+':''}${b.s.roi.toFixed(0)}%</small></span></button>`}).join(''):`<div class="none">${SKEY?'조건에 맞는 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
+  h+=sp.length?sp.slice(0,15).map(({pr,r})=>{const b=r.best,g=b.m==='N'?pr.N:pr.H,lab=(b.m==='N'?NLAB(r.n3):HLAB(r.h3,r.isO))[b.s.j];
+    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} ${MKN(isOU(pr.H))} ${LNS(pr.H)}</small></span><span class="s"><b style="color:var(--felt)">${lab} ${g.o[b.s.j].toFixed(2)}</b><small>${r.n}경기${r.n<30?' <span class="few">적음</span>':''} ${b.s.act.toFixed(0)}% (기대 ${b.s.exp.toFixed(0)}%)</small><small>수익 ${b.s.roi>0?'+':''}${b.s.roi.toFixed(0)}%</small></span></button>`}).join(''):`<div class="none">${SKEY?'조건에 맞는 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
   const ap=sheetPairs(R).map(pr=>({pr,A:SALL[pr.key]})).filter(x=>x.A&&x.A.best&&x.pr.N.t>now).sort((a,b)=>((b.A.best.pos/b.A.best.tot>=0.7)-(a.A.best.pos/a.A.best.tot>=0.7))||(b.A.best.max-a.A.best.max));
   h+=`<h2 style="margin-top:22px">모든 조합 자동 비교</h2><div class="none" style="font-size:12px;padding:2px 0 4px">허용폭 3가지 × 최종 승패/전부 × 초기 배당 × 변경(안 봄·유무·횟수) × 구매율(안 봄·일반·일반+핸디) × 핸디 초기선, 최대 216개 조합을 전부 돌려요. 한 조합만 고르면 우연히 100%가 쉽게 나오니까, 여러 조합에서 같은 결과가 기대보다 많이 나왔는지 봐요. 70% 넘는 조합에서 같은 방향인 경기 중 표본이 큰 순서예요. 표본은 '가운데~가장 넓은 조합' 경기 수예요.</div>`;
   h+=ap.length?ap.slice(0,15).map(({pr,A})=>{const b=A.best,g=b.m==='N'?pr.N:pr.H;
-    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} 핸디 ${pr.H.ln}</small></span><span class="s"><b style="color:var(--felt)">${b.lab} ${g.o[b.j].toFixed(2)}</b><small>${b.pos}/${b.tot}조합 기대 이상</small><small>평균 ${b.act.toFixed(0)}% (기대 ${b.exp.toFixed(0)}) · 표본 ${b.med}~${b.max}경기${b.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'모든 조합을 비교하는 중이거나, 절반 넘는 조합에서 같은 방향인 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
+    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} ${MKN(isOU(pr.H))} ${LNS(pr.H)}</small></span><span class="s"><b style="color:var(--felt)">${b.lab} ${g.o[b.j].toFixed(2)}</b><small>${b.pos}/${b.tot}조합 기대 이상</small><small>평균 ${b.act.toFixed(0)}% (기대 ${b.exp.toFixed(0)}) · 표본 ${b.med}~${b.max}경기${b.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'모든 조합을 비교하는 중이거나, 절반 넘는 조합에서 같은 방향인 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
   h+=`<h3 style="margin-top:22px">최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
     const mvs=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
@@ -426,9 +428,9 @@ async function fetchText(url){const r=await fetch(url);if(!r.ok)throw new Error(
 function parsePair(rd,l){const a=l.split(',');if(a.length!==28&&a.length!==29)return null;const n=i=>a[i]===''?NaN:+a[i];
   return {rd,dt:a[0],lg:a[1],h:a[2],a:a[3],sc:a[4],ni:[n(5),n(6),n(7)],nf:[n(8),n(9),n(10)],nch:n(11),nv:[n(12),n(13),n(14)],ln:n(15),hi:[n(16),n(17),n(18)],hf:[n(19),n(20),n(21)],hch:n(22),hv:[n(23),n(24),n(25)],r1:n(26),r2:n(27),ihc:a.length===29&&a[28]!==''?n(28):n(15)}}
 function loadPairs(sp){if(PH[sp])return PH[sp];PH[sp]=(async()=>{const rows=[];
-  const t=await fetchText(`data/history/pair_${sp}.csv.gz`);for(const l of t.split('\n'))if(l){const x=parsePair(0,l);if(x)rows.push(x)}
+  const fb=sp.startsWith('ou_')?'oupair_'+sp.slice(3):'pair_'+sp;const t=await fetchText(`data/history/${fb}.csv.gz`);for(const l of t.split('\n'))if(l){const x=parsePair(0,l);if(x)rows.push(x)}
   let idx={};try{idx=JSON.parse(await fetchText('data/history_new/index.json?'+Date.now()))}catch(e){}
-  for(const rd of (idx[sp]||[])){try{const t2=await fetchText(`data/history_new/${rd}/pair_${sp}.csv?`+Date.now());for(const l of t2.split('\n'))if(l){const x=parsePair(rd,l);if(x)rows.push(x)}}catch(e){}}
+  for(const rd of (idx[sp]||[])){try{const t2=await fetchText(`data/history_new/${rd}/${fb}.csv?`+Date.now());for(const l of t2.split('\n'))if(l){const x=parsePair(rd,l);if(x)rows.push(x)}}catch(e){}}
   return rows})();PH[sp].catch(()=>{delete PH[sp]});return PH[sp]}
 const pk3=(o,three)=>three?o:[o[0],o[2]];
 const nzp=a=>{const inv=a.map(x=>1/x),s=inv.reduce((p,q)=>p+q,0);return inv.map(x=>x/s)};
