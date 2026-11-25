@@ -336,13 +336,15 @@ async function computeSheet(R){computeAll(R);const key=R.gmTs+':'+DATA.updated+'
 // ── 모든 조합 자동 비교: 시트 조건 조합 216개를 전부 돌려서 결과 방향이 얼마나 일관된지 셈
 const SALL={};let SAKEY='';
 function sheetCombos(n3,h3,hasV){const out=[];
-  for(const tol of [0.03,0.06,0.1])for(const fin of (n3||h3)?['wl','all']:['wl'])for(const ini of [0,1])for(const chg of ['none','mv','cnt'])for(const vote of hasV?['none','n','nh']:['none'])for(const hli of [0,1]){
-    const wl=fin==='all'?[1,1,1]:[1,0,1],iw=ini?[1,0,1]:[0,0,0];
+  for(const tol of [0.03,0.06,0.1])for(const fin of (n3||h3)?['none','wl','all']:['none','wl'])for(const ini of (n3||h3)?['none','wl','all']:['none','wl'])for(const chg of ['none','mv','cnt'])for(const vote of hasV?['none','n','nh']:['none'])for(const hli of [0,1]){
+    if(fin==='none'&&ini==='none')continue;
+    const sl=k=>k==='all'?[1,1,1]:k==='wl'?[1,0,1]:[0,0,0],wl=sl(fin),iw=sl(ini);
     out.push({c:{tol,nf:wl,hf:wl,ni:iw,hi:iw,hli,hlf:1,nmv:chg==='mv'?1:0,hmv:chg==='mv'?1:0,nch:chg==='cnt'?1:0,hch:chg==='cnt'?1:0,nv:vote!=='none'?1:0,hv:vote==='nh'?1:0,auto:0},
-      lab:[`±${tol.toFixed(2)}`,fin==='all'?'최종 전부':'최종 승패',ini?'초기 승패':'',chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote==='n'?'구매율 일반':vote==='nh'?'구매율 일반+핸디':'',hli?'핸디 초기선':''].filter(Boolean).join(' · ')})}
+      lab:[`±${tol.toFixed(2)}`,fin==='all'?'최종 전부':fin==='wl'?'최종 승패':'',ini==='all'?'초기 전부':ini==='wl'?'초기 승패':'',chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote==='n'?'구매율 일반':vote==='nh'?'구매율 일반+핸디':'',hli?'핸디 초기선':''].filter(Boolean).join(' · ')})}
   return out}
 function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0,isO=isOU(H);
-  const sub=rows.filter(x=>(!x.rd||x.rd<round)&&x.ln===(H.ln||0)&&Math.abs(x.nf[0]-N.o[0])<=e&&Math.abs(x.nf[2]-N.o[2])<=e&&Math.abs(x.hf[0]-H.o[0])<=e&&Math.abs(x.hf[2]-H.o[2])<=e);
+  const Ni=N.i&&N.i[0]>1?N.i:N.o,Hi=H.i&&H.i[0]>1?H.i:H.o,nr=(a,b)=>Math.abs(a[0]-b[0])<=e&&Math.abs(a[2]-b[2])<=e;
+  const sub=rows.filter(x=>(!x.rd||x.rd<round)&&x.ln===(H.ln||0)&&((nr(x.nf,N.o)&&nr(x.hf,H.o))||(nr(x.ni,Ni)&&nr(x.hi,Hi))));
   const vs=v=>v&&v.reduce((a,b)=>a+b,0)>50,hasV=vs(N.v);
   const list=sheetCombos(n3,h3,hasV).map(({c,lab})=>{const r=sheetFind(sub,N,H,c,round);return {lab,n:r.n,N:r.N,H:r.H}});
   const {sum,best}=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO));
@@ -367,13 +369,14 @@ function loadSingle(key){if(AH[key])return AH[key];AH[key]=(async()=>{const rows
   return rows})();AH[key].catch(()=>{delete AH[key]});return AH[key]}
 function singleAll(rows,G,round){const t3=G.o[1]>0,hasL=MKIND(G)!=='normal',e=0.1+1e-9,Gi=G.i&&G.i[0]>1?G.i:G.o,gil=G.il!=null?G.il:G.ln,mv=(G.c||0)>0;
   const V=G.v&&G.v.reduce((a,b)=>a+b,0)>50?G.v.map(x=>x/G.v.reduce((a,b)=>a+b,0)*100):null;
-  const pre=rows.filter(x=>(!x.rd||x.rd<round)&&((x.f[1]>1)===t3)&&(!hasL||x.ln===G.ln)&&Math.abs(x.f[0]-G.o[0])<=e&&Math.abs(x.f[2]-G.o[2])<=e);
+  const pre=rows.filter(x=>(!x.rd||x.rd<round)&&((x.f[1]>1)===t3)&&(!hasL||x.ln===G.ln)&&((Math.abs(x.f[0]-G.o[0])<=e&&Math.abs(x.f[2]-G.o[2])<=e)||(Math.abs(x.i[0]-Gi[0])<=e&&Math.abs(x.i[2]-Gi[2])<=e)));
   const js=t3?[0,1,2]:[0,2],vt=t3?10:7,list=[];
-  for(const tol of [0.03,0.06,0.1])for(const fin of t3?['wl','all']:['wl'])for(const ini of [0,1])for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of hasL?[0,1]:[0]){
-    const T=tol+1e-9,fj=fin==='all'?js:[0,2];
-    const out=pre.filter(x=>fj.every(j=>Math.abs(x.f[j]-G.o[j])<=T)&&(!ini||[0,2].every(j=>Math.abs(x.i[j]-Gi[j])<=T))&&(chg!=='mv'||(x.ch>0)===mv)&&(chg!=='cnt'||x.ch===(G.c||0))&&(!vote||js.every(j=>Math.abs(x.v[j]-V[j])<=vt))&&(!li||x.il===gil));
+  for(const tol of [0.03,0.06,0.1])for(const fin of t3?['none','wl','all']:['none','wl'])for(const ini of t3?['none','wl','all']:['none','wl'])for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of hasL?[0,1]:[0]){
+    if(fin==='none'&&ini==='none')continue;
+    const T=tol+1e-9,fj=fin==='all'?js:fin==='wl'?[0,2]:[],ij=ini==='all'?js:ini==='wl'?[0,2]:[];
+    const out=pre.filter(x=>fj.every(j=>Math.abs(x.f[j]-G.o[j])<=T)&&ij.every(j=>Math.abs(x.i[j]-Gi[j])<=T)&&(chg!=='mv'||(x.ch>0)===mv)&&(chg!=='cnt'||x.ch===(G.c||0))&&(!vote||js.every(j=>Math.abs(x.v[j]-V[j])<=vt))&&(!li||x.il===gil));
     const n=out.length,side=js.map(j=>{let k=0,ex=0,ret=0;for(const x of out){const sm=js.reduce((a,q)=>a+1/x.f[q],0);ex+=1/x.f[j]/sm;if(x.r===j){k++;ret+=x.f[j]}}return {j,k,act:n?k/n*100:0,exp:n?ex/n*100:0,res:n?(k-ex)/n*100:0,roi:n?(ret/n-1)*100:0}});
-    list.push({lab:[`±${tol.toFixed(2)}`,t3?(fin==='all'?'최종 전부':'최종 승패'):'최종',ini?'초기':'',chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote?'구매율':'',li?'초기 기준점':''].filter(Boolean).join(' · '),n,N:side,H:[]})}
+    list.push({lab:[`±${tol.toFixed(2)}`,fin==='all'?'최종 전부':fin==='wl'?(t3?'최종 승패':'최종'):'',ini==='all'?'초기 전부':ini==='wl'?(t3?'초기 승패':'초기'):'',chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote?'구매율':'',li?'초기 기준점':''].filter(Boolean).join(' · '),n,N:side,H:[]})}
   const lab=MKIND(G)==='normal'?NLAB(t3):HLAB(t3,isOU(G));const {sum,best}=sumOf(list,()=>lab);
   return {list,sum,best,total:list.length,single:1,G}}
 async function computeAll(R){const key=R.gmTs+':'+DATA.updated;if(SAKEY===key)return;SAKEY=key;
@@ -412,7 +415,7 @@ function sheetSteps(r){const c=SCOND,f=r.fun||[],a=[`최종 배당 ${f[0]??'-'}`
   if(c.nv||c.hv)a.push(r.nvUsed||r.hvUsed?`구매율 ${r.base??r.n}`:'구매율(아직 없음, 건너뜀)');
   if(r.step==='cnt')a.push(`변경 횟수 ${r.n}`);else if(c.nch||c.hch)a.push('변경 횟수');else if(r.step==='cnt0')a.push('변경 횟수 맞는 경기 0이라 생략');
   return a.join(' → ')}
-const GRADE=b=>{const sh=b.tot?b.pos/b.tot:0,sc=b.wres*b.med/(b.med+30);return sh>=0.9&&sc>=4?['강함','var(--felt)']:sh>=0.7&&sc>=2?['보통','var(--amber)']:['약함','var(--mute)']};
+const GRADE=b=>{const sh=b.tot?b.pos/b.tot:0,sc=b.wres*b.med/(b.med+30);return sh>=0.9&&sc>=4&&b.med>=10?['강함','var(--felt)']:sh>=0.7&&sc>=2&&b.med>=3?['보통','var(--amber)']:['약함','var(--mute)']};
 const AGREE=b=>{const sh=b.tot?b.pos/b.tot:0;return sh>=0.95?'어떤 조건으로 봐도 같아요':sh>=0.8?'조건 대부분에서 같아요':'조건 절반 넘게 같아요'};
 const SGLN=g=>MKIND(g)==='normal'?'일반 단독':MKN(isOU(g))+' '+LNS(g)+' 단독';
 // ── 결론: 짝·단독 분석을 모두 모아서 시장마다 한 쪽만 고름 (표본 크기로 보정한 차이가 가장 큰 쪽, 조건 70% 이상 같은 방향일 때만)
@@ -458,7 +461,7 @@ function drawBrief(rows,R,now){
   const vs=[];for(const {N,Hs} of byN.values())for(const v of matchVerdicts(N,Hs))if(!v.none)vs.push({N,v});
   for(let i=vs.length-1;i>=0;i--)if(vs[i].v.grade[0]==='약함')vs.splice(i,1);
   vs.sort((a,b)=>((b.v.grade[0]==='강함')-(a.v.grade[0]==='강함'))||(b.v.sc-a.v.sc));
-  h+=`<h2>결론 모음</h2><div class="none" style="font-size:12.5px;padding:2px 0 4px;line-height:1.55">경기·시장마다 일반·핸디·언오 짝 분석과 단독 분석을 전부 돌려서 <b>더 좋은 쪽 하나만</b> 골랐어요. 분석끼리 엇갈리면 표본이 크고 차이가 큰 쪽을 따라요.<br><b style="color:var(--felt)">강함</b> 거의 모든 조건에서 같고 차이·표본 충분 · <b style="color:var(--amber)">보통</b> 대부분 조건에서 같음 · 약함(살짝 기운 정도)이나 뚜렷한 쪽이 없는 시장은 여기선 빼고, 경기 안 결론 칸에서만 보여요.</div>`;
+  h+=`<h2>결론 모음</h2><div class="none" style="font-size:12.5px;padding:2px 0 4px;line-height:1.55">경기·시장마다 일반·핸디·언오 짝 분석과 단독 분석을 전부 돌려서 <b>더 좋은 쪽 하나만</b> 골랐어요. 분석끼리 엇갈리면 표본이 크고 차이가 큰 쪽을 따라요.<br><b style="color:var(--felt)">강함</b> 거의 모든 조건에서 같고 차이도 크고, 좁힌 조건에서도 표본 10경기 이상 · <b style="color:var(--amber)">보통</b> 대부분 조건에서 같음 · 약함(살짝 기운 정도)이나 뚜렷한 쪽이 없는 시장은 여기선 빼고, 경기 안 결론 칸에서만 보여요.</div>`;
   h+=vs.length?vs.slice(0,20).map(({N,v})=>{const x=v.best.x;
     return `<button class="pick" data-s="${N.s}"><span class="t">${hhmm(N.t)}</span><span class="m">${esc(N.h)}<small>${esc(N.a)} 상대, ${esc(N.lg||'')} ${VMK(v.g)}</small></span><span class="s"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}</b><small>과거 ${x.wact.toFixed(0)}% 나옴 · 배당상 ${x.wexp.toFixed(0)}%</small><small>표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'지금은 뚜렷한 쪽이 있는 시장이 없거나, 아직 분석 중이에요.':'과거 경기를 찾는 중이에요…'}</div>`;
   h+=`<h3 style="margin-top:22px">최근 90분 배당 변동</h3>`;
