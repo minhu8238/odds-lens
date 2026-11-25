@@ -123,6 +123,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .cflt{display:flex;flex-wrap:wrap;gap:5px;align-items:center;padding:8px 10px 0;font-size:11px;color:var(--mute)}.cflt span{margin-left:4px}.cflt span:first-child{margin-left:0}.cflt button{padding:4px 8px;border-radius:999px;font-size:11px;background:var(--surface);border:1px solid var(--line);color:var(--ink2)}.cflt button[aria-pressed=true]{background:var(--ink2);color:var(--paper);border-color:var(--ink2)}
 .cres{padding:8px 12px 10px}.chead{font-size:14px}.chead small{display:block;color:var(--mute);font-size:11px}
 .tally{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:13px}.tally b{font-weight:700}.tally small{color:var(--mute)}
+.allc{margin:8px 0 4px;padding:8px 0 2px;border-top:1px solid var(--line)}.arow{display:grid;grid-template-columns:34px 54px 1fr;gap:8px;align-items:center;font-size:12px;margin-top:5px}.arow .al{font-weight:700}.arow .ab{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.arow .ab i{display:block;height:100%;background:var(--mute)}.arow.c .ab i{background:var(--felt)}.arow.x .ab i{background:var(--brick)}.arow .av small{display:block;color:var(--faint)}.atbl{overflow-x:auto;margin-top:6px}.atbl table{border-collapse:collapse;font-size:11px;width:100%}.atbl td,.atbl th{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.atbl td:first-child,.atbl th:first-child{text-align:left;white-space:normal}.atbl .pos{color:var(--felt);font-weight:700}.atbl .neg{color:var(--brick)}
 .clist{margin-top:8px}.crow{background:var(--surface);border-radius:var(--r-sm);padding:7px 9px;margin-top:6px;font-size:12px}
 .c1{color:var(--ink2);line-height:1.35}.c1 b{color:var(--ink);font-weight:600}.cd{color:var(--mute)}
 .c2{display:grid;grid-template-columns:minmax(30px,max-content) 1fr auto 40px;gap:6px;align-items:center;margin-top:3px}
@@ -325,12 +326,45 @@ function sheetRun(rows,N,H,c,round){const r=sheetFind(rows,N,H,c,round);r.step='
 function sheetPairs(R){const by={},out=[];for(const g of R.games){if(/전반|후반/.test(g.bn||''))continue;(by[g.t+'|'+g.h+'|'+g.a]=by[g.t+'|'+g.h+'|'+g.a]||[]).push(g)}
   for(const L of Object.values(by)){const N=L.find(g=>/^(승무패|일반 승패|승패)$/.test(g.ty));if(!N||!SPE[N.sp])continue;for(const H of L.filter(g=>/핸디/.test(g.ty)))out.push({N,H,key:N.s+':'+H.s})}return out}
 let SKEY='';
-async function computeSheet(R){const key=R.gmTs+':'+DATA.updated+':'+JSON.stringify(SCOND);if(SKEY===key)return;SKEY=key;
+async function computeSheet(R){computeAll(R);const key=R.gmTs+':'+DATA.updated+':'+JSON.stringify(SCOND);if(SKEY===key)return;SKEY=key;
   for(const pr of sheetPairs(R)){let rows;try{rows=await loadPairs(SPE[pr.N.sp])}catch(e){continue}
     const r=sheetRun(rows,pr.N,pr.H,SCOND,R.gmTs);
     const all=[...r.N.map(s=>({m:'N',s})),...r.H.map(s=>({m:'H',s}))].filter(x=>x.s.res>0).sort((a,b)=>b.s.res-a.s.res);
     SRES[pr.key]=Object.assign(r,{best:r.n?all[0]||null:null,N0:pr.N,H0:pr.H})}
   if(DATA.rounds[RI]===R)draw()}
+// ── 모든 조합 자동 비교: 시트 조건 조합 216개를 전부 돌려서 결과 방향이 얼마나 일관된지 셈
+const SALL={};let SAKEY='';
+function sheetCombos(n3,h3,hasV){const out=[];
+  for(const tol of [0.03,0.06,0.1])for(const fin of (n3||h3)?['wl','all']:['wl'])for(const ini of [0,1])for(const chg of ['none','mv','cnt'])for(const vote of hasV?['none','n','nh']:['none'])for(const hli of [0,1]){
+    const wl=fin==='all'?[1,1,1]:[1,0,1],iw=ini?[1,0,1]:[0,0,0];
+    out.push({c:{tol,nf:wl,hf:wl,ni:iw,hi:iw,hli,hlf:1,nmv:chg==='mv'?1:0,hmv:chg==='mv'?1:0,nch:chg==='cnt'?1:0,hch:chg==='cnt'?1:0,nv:vote!=='none'?1:0,hv:vote==='nh'?1:0,auto:0},
+      lab:[`±${tol.toFixed(2)}`,fin==='all'?'최종 전부':'최종 승패',ini?'초기 승패':'',chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote==='n'?'구매율 일반':vote==='nh'?'구매율 일반+핸디':'',hli?'핸디 초기선':''].filter(Boolean).join(' · ')})}
+  return out}
+function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0;
+  const sub=rows.filter(x=>(!x.rd||x.rd<round)&&x.ln===(H.ln||0)&&Math.abs(x.nf[0]-N.o[0])<=e&&Math.abs(x.nf[2]-N.o[2])<=e&&Math.abs(x.hf[0]-H.o[0])<=e&&Math.abs(x.hf[2]-H.o[2])<=e);
+  const vs=v=>v&&v.reduce((a,b)=>a+b,0)>50,hasV=vs(N.v);
+  const list=sheetCombos(n3,h3,hasV).map(({c,lab})=>{const r=sheetFind(sub,N,H,c,round);return {lab,n:r.n,N:r.N,H:r.H}});
+  const sum=[];for(const m of ['N','H'])for(const s0 of list[0][m]){const cs=list.filter(x=>x.n>0).map(x=>({n:x.n,s:x[m].find(q=>q.j===s0.j)}));
+    const ns=cs.map(x=>x.n).sort((a,b)=>a-b);
+    sum.push({m,j:s0.j,lab:(m==='N'?NLAB(n3):HLAB(h3))[s0.j],tot:cs.length,pos:cs.filter(x=>x.s.res>0).length,
+      act:cs.length?cs.reduce((a,x)=>a+x.s.act,0)/cs.length:0,exp:cs.length?cs.reduce((a,x)=>a+x.s.exp,0)/cs.length:0,
+      roi:cs.length?cs.reduce((a,x)=>a+x.s.roi,0)/cs.length:0,med:ns.length?ns[ns.length>>1]:0,max:ns.length?ns[ns.length-1]:0})}
+  const best=sum.filter(x=>x.tot&&x.pos/x.tot>0.5).sort((a,b)=>(b.pos/b.tot-a.pos/a.tot)||(b.med-a.med))[0]||null;
+  return {list,sum,best,total:list.length,n3,h3,N0:N,H0:H}}
+async function computeAll(R){const key=R.gmTs+':'+DATA.updated;if(SAKEY===key)return;SAKEY=key;
+  for(const pr of sheetPairs(R)){if(SAKEY!==key)return;let rows;try{rows=await loadPairs(SPE[pr.N.sp])}catch(e){continue}
+    SALL[pr.key]=sheetAll(rows,pr.N,pr.H,R.gmTs);await new Promise(r=>setTimeout(r,0))}
+  if(DATA.rounds[RI]===R)draw()}
+const SAOPEN=new Set();
+function allBox(key){const A=SALL[key];if(!A)return '<div class="allc"><div class="none" style="font-size:12px">모든 조합 비교 중…</div></div>';
+  const used=A.list.filter(x=>x.n>0).length;
+  let h=`<div class="allc"><div class="ph">모든 조합 비교 <b>${used}/${A.total}조합</b>에 표본 있음</div>`;
+  if(!used)return h+'<div class="none" style="font-size:12px">어떤 조합에도 맞는 과거 경기가 없어요.</div></div>';
+  h+=A.sum.map(x=>{const sh=x.tot?x.pos/x.tot:0;return `<div class="arow ${sh>=0.7?'c':sh<=0.3?'x':''}"><span class="al">${x.lab}</span><span class="ab"><i style="width:${(sh*100).toFixed(0)}%"></i></span><span class="av"><b>${x.pos}/${x.tot}</b> 조합에서 기대 이상<small>평균 ${x.act.toFixed(0)}% (기대 ${x.exp.toFixed(0)}) · 수익 ${x.roi>0?'+':''}${x.roi.toFixed(0)}% · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small></span></div>`}).join('');
+  const op=SAOPEN.has(key);h+=`<button class="copen" data-aopen="${key}">${op?'조합 목록 닫기':'조합별 결과 보기'}</button>`;
+  if(op){const labs=[...A.N0?NLAB(A.n3).map((l,j)=>({m:'N',j,l})).filter(x=>x.l):[],...HLAB(A.h3).map((l,j)=>({m:'H',j,l})).filter(x=>x.l)];
+    h+=`<div class="atbl"><table><tr><th>조합</th><th>경기</th>${labs.map(x=>`<th>${x.l}</th>`).join('')}</tr>${A.list.filter(x=>x.n>0).sort((a,b)=>b.n-a.n).map(x=>`<tr><td>${x.lab}</td><td>${x.n}</td>${labs.map(l=>{const s=x[l.m].find(q=>q.j===l.j);return `<td class="${s.res>0?'pos':s.res<0?'neg':''}">${s.act.toFixed(0)}</td>`}).join('')}</tr>`).join('')}</table></div>`}
+  return h+'</div>'}
 const NLAB=t=>t?['승','무','패']:['승','','패'],HLAB=t=>t?['핸승','핸무','핸패']:['핸승','','핸패'];
 function sheetCards(r){const card=(s,lab,fo)=>`<div class="pc ${s.res>0?'c':s.res<0&&r.n?'x':''}"><span>${lab}</span><b>${r.n?s.act.toFixed(0)+'%':'–'}</b><small>기대 ${r.n?s.exp.toFixed(0):'–'} · 수익 ${r.n?(s.roi>0?'+':'')+s.roi.toFixed(0)+'%':'–'}</small></div>`;
   return `<div class="pl" style="--k:${r.N.length}">${r.N.map(s=>card(s,NLAB(r.n3)[s.j])).join('')}</div><div class="pl" style="--k:${r.H.length}">${r.H.map(s=>card(s,HLAB(r.h3)[s.j])).join('')}</div>`}
@@ -350,9 +384,9 @@ function sheetSteps(r){const c=SCOND,f=r.fun||[],a=[`최종 배당 ${f[0]??'-'}`
   return a.join(' → ')}
 function sheetBox(m){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)return '';
   return m.list.filter(x=>marketName(x.g)==='핸디캡').map(h=>{const key=nrow.g.s+':'+h.g.s,r=SRES[key];const ln=`${h.g.ln>0?'+':''}${h.g.ln}`;
-    if(!r)return `<div class="sbox"><div class="ph">시트 분석 · 일반 + 핸디 ${ln}</div><div class="none">찾는 중…</div></div>`;
+    if(!r)return `<div class="sbox"><div class="ph">시트 분석 · 일반 + 핸디 ${ln}</div><div class="none">찾는 중…</div>${allBox(key)}</div>`;
     const open=SOPEN.has(key);
-    let html=`<div class="sbox" data-skey="${key}"><div class="ph">시트 분석 · 일반 + 핸디 ${ln} <b>${r.n}경기</b>${r.n&&r.n<30?' <span class="few">적음</span>':''}</div><div class="none" style="font-size:12px;padding:0 0 6px">${sheetSteps(r)}</div>${r.n?sheetCards(r):'<div class="none">조건에 맞는 과거 경기가 없어요. 조건을 줄여 보세요.</div>'}
+    let html=`<div class="sbox" data-skey="${key}"><div class="ph">시트 분석 · 일반 + 핸디 ${ln} <b>${r.n}경기</b>${r.n&&r.n<30?' <span class="few">적음</span>':''}</div><div class="none" style="font-size:12px;padding:0 0 6px">${sheetSteps(r)}</div>${allBox(key)}${r.n?sheetCards(r):'<div class="none">조건에 맞는 과거 경기가 없어요. 조건을 줄여 보세요.</div>'}
       <button class="copen" data-sopen>${open?'조건·목록 닫기':'조건 바꾸기 · 경기 목록'}</button>`;
     if(open){html+=condChips(r.N0,r.H0);
       const pk=(a,t)=>t?a:[a[0],a[2]];const od=(f,i,t)=>pk(f,t).map((v,k)=>{const iv=pk(i,t)[k];return `<span class="o">${Math.abs(v-iv)>=0.005&&iv>1?`<span class="ch">${iv.toFixed(2)}→</span>`:''}${v.toFixed(2)}</span>`}).join('');
@@ -372,6 +406,10 @@ function drawBrief(rows,R,now){
   let h=`<h2>시트 방식 자동 분석</h2><div class="counts"><span><b>${sp.length}</b>경기</span><span style="flex:1"></span></div><div class="none" style="font-size:12px;padding:2px 0 4px">기본 순서: 일반·핸디 최종 승·패 배당 ±${SCOND.tol.toFixed(2)} (핸디 기준점 같음) → 일반·핸디 변경 유무 → ${SAUTO}경기 이상 남으면 변경 횟수까지. 구매율은 경기 블록에서 켜서 비교할 수 있어요. 경기 블록에서 조건을 바꾸면 전체에 같이 적용돼요.</div>`;
   h+=sp.length?sp.slice(0,15).map(({pr,r})=>{const b=r.best,g=b.m==='N'?pr.N:pr.H,lab=(b.m==='N'?NLAB(r.n3):HLAB(r.h3))[b.s.j];
     return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} 핸디 ${pr.H.ln}</small></span><span class="s"><b style="color:var(--felt)">${lab} ${g.o[b.s.j].toFixed(2)}</b><small>${r.n}경기${r.n<30?' <span class="few">적음</span>':''} ${b.s.act.toFixed(0)}% (기대 ${b.s.exp.toFixed(0)}%)</small><small>수익 ${b.s.roi>0?'+':''}${b.s.roi.toFixed(0)}%</small></span></button>`}).join(''):`<div class="none">${SKEY?'조건에 맞는 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
+  const ap=sheetPairs(R).map(pr=>({pr,A:SALL[pr.key]})).filter(x=>x.A&&x.A.best&&x.pr.N.t>now).sort((a,b)=>((b.A.best.pos/b.A.best.tot>=0.7)-(a.A.best.pos/a.A.best.tot>=0.7))||(b.A.best.max-a.A.best.max));
+  h+=`<h2 style="margin-top:22px">모든 조합 자동 비교</h2><div class="none" style="font-size:12px;padding:2px 0 4px">허용폭 3가지 × 최종 승패/전부 × 초기 배당 × 변경(안 봄·유무·횟수) × 구매율(안 봄·일반·일반+핸디) × 핸디 초기선, 최대 216개 조합을 전부 돌려요. 한 조합만 고르면 우연히 100%가 쉽게 나오니까, 여러 조합에서 같은 결과가 기대보다 많이 나왔는지 봐요. 70% 넘는 조합에서 같은 방향인 경기 중 표본이 큰 순서예요. 표본은 '가운데~가장 넓은 조합' 경기 수예요.</div>`;
+  h+=ap.length?ap.slice(0,15).map(({pr,A})=>{const b=A.best,g=b.m==='N'?pr.N:pr.H;
+    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} 핸디 ${pr.H.ln}</small></span><span class="s"><b style="color:var(--felt)">${b.lab} ${g.o[b.j].toFixed(2)}</b><small>${b.pos}/${b.tot}조합 기대 이상</small><small>평균 ${b.act.toFixed(0)}% (기대 ${b.exp.toFixed(0)}) · 표본 ${b.med}~${b.max}경기${b.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'모든 조합을 비교하는 중이거나, 절반 넘는 조합에서 같은 방향인 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
   h+=`<h3 style="margin-top:22px">최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
     const mvs=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
@@ -511,6 +549,7 @@ document.getElementById('list').addEventListener('click',e=>{
     return}
   const sb=e.target.closest('.sbox');
   if(sb){const key=sb.dataset.skey;
+    if(e.target.closest('[data-aopen]')){const k=e.target.closest('[data-aopen]').dataset.aopen;SAOPEN.has(k)?SAOPEN.delete(k):SAOPEN.add(k);draw();return}
     if(e.target.closest('[data-sopen]')){SOPEN.has(key)?SOPEN.delete(key):SOPEN.add(key);draw();return}
     const t=e.target.closest('[data-tol]');if(t){SCOND.tol=+t.dataset.tol}
     const c=e.target.closest('[data-sc]');if(c){const k=c.dataset.sc;if(c.dataset.j!=null)SCOND[k][+c.dataset.j]=SCOND[k][+c.dataset.j]?0:1;else SCOND[k]=SCOND[k]?0:1}
