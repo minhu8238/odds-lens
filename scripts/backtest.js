@@ -14,7 +14,7 @@ const vok = v => v.every(x => x >= 0) && v.reduce((a, b) => a + b, 0) > 50;
 function combos(n3, h3, hasV) {
   const out = [];
   for (const ti of [0, 1, 2]) for (const fin of (n3 || h3) ? ['none', 'wl', 'all'] : ['none', 'wl']) for (const ini of (n3 || h3) ? ['none', 'wl', 'all'] : ['none', 'wl'])
-    for (const chg of ['none', 'mv', 'cnt']) for (const vote of hasV ? ['none', 'n', 'nh'] : ['none']) for (const hli of [0, 1]) {
+    for (const chg of ['none', 'mv', 'cnt']) for (const vote of hasV ? ['none', 'n', 'nh'] : ['none']) for (const hli of (process.env.FORCEL ? [1] : [0, 1])) {
       if (fin === 'none' && ini === 'none') continue;
       out.push({ ti, fin, ini, chg, vote, hli, key: [TOLS[ti].toFixed(2), fin, ini, chg, vote, hli].join('|') })
     }
