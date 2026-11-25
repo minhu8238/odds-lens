@@ -335,8 +335,8 @@ async function computeSheet(R){computeAll(R);const key=R.gmTs+':'+DATA.updated+'
   if(DATA.rounds[RI]===R)draw()}
 // ── 모든 조합 자동 비교: 시트 조건 조합 216개를 전부 돌려서 결과 방향이 얼마나 일관된지 셈
 const SALL={};let SAKEY='';
-function sheetCombos(n3,h3,hasV,forceL){const out=[];
-  for(const tol of [0.03,0.06,0.1])for(const fin of (n3||h3)?['none','wl','all']:['none','wl'])for(const ini of (n3||h3)?['none','wl','all']:['none','wl'])for(const chg of ['none','mv','cnt'])for(const vote of hasV?['none','n','nh']:['none'])for(const hli of forceL?[1]:[0,1]){
+function sheetCombos(n3,h3,hasV,forceL,moved){const out=[];
+  for(const tol of [0.03,0.06,0.1])for(const fin of (n3||h3)?['wl','all']:['wl'])for(const ini of moved?((n3||h3)?['wl','all']:['wl']):((n3||h3)?['none','wl','all']:['none','wl']))for(const chg of ['none','mv','cnt'])for(const vote of hasV?['none','n','nh']:['none'])for(const hli of forceL?[1]:[0,1]){
     if(fin==='none'&&ini==='none')continue;
     const sl=k=>k==='all'?[1,1,1]:k==='wl'?[1,0,1]:[0,0,0],wl=sl(fin),iw=sl(ini);
     out.push({c:{tol,nf:wl,hf:wl,ni:iw,hi:iw,hli,hlf:1,nmv:chg==='mv'?1:0,hmv:chg==='mv'?1:0,nch:chg==='cnt'?1:0,hch:chg==='cnt'?1:0,nv:vote!=='none'?1:0,hv:vote==='nh'?1:0,auto:0},
@@ -346,7 +346,7 @@ function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0,isO=i
   const Ni=N.i&&N.i[0]>1?N.i:N.o,Hi=H.i&&H.i[0]>1?H.i:H.o,nr=(a,b)=>Math.abs(a[0]-b[0])<=e&&Math.abs(a[2]-b[2])<=e;
   const sub=rows.filter(x=>(!x.rd||x.rd<round)&&x.ln===(H.ln||0)&&((nr(x.nf,N.o)&&nr(x.hf,H.o))||(nr(x.ni,Ni)&&nr(x.hi,Hi))));
   const vs=v=>v&&v.reduce((a,b)=>a+b,0)>50,hasV=vs(N.v);
-  const list=sheetCombos(n3,h3,hasV,N.sp==='농구').map(({c,lab})=>{const r=sheetFind(sub,N,H,c,round);return {lab,n:r.n,N:r.N,H:r.H}});
+  const list=sheetCombos(n3,h3,hasV,N.sp==='농구',(N.c||0)>0||(H.c||0)>0).map(({c,lab})=>{const r=sheetFind(sub,N,H,c,round);return {lab,n:r.n,N:r.N,H:r.H}});
   const {sum,best}=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO));
   const sum1=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO),1).sum;
   return {list,sum,sum1,best,total:list.length,n3,h3,isO,N0:N,H0:H}}
@@ -374,7 +374,7 @@ function singleAll(rows,G,round){const t3=G.o[1]>0,hasL=MKIND(G)!=='normal',e=0.
   const V=G.v&&G.v.reduce((a,b)=>a+b,0)>50?G.v.map(x=>x/G.v.reduce((a,b)=>a+b,0)*100):null;
   const pre=rows.filter(x=>(!x.rd||x.rd<round)&&((x.f[1]>1)===t3)&&(!hasL||x.ln===G.ln)&&((Math.abs(x.f[0]-G.o[0])<=e&&Math.abs(x.f[2]-G.o[2])<=e)||(Math.abs(x.i[0]-Gi[0])<=e&&Math.abs(x.i[2]-Gi[2])<=e)));
   const js=t3?[0,1,2]:[0,2],vt=t3?10:7,list=[];
-  for(const tol of [0.03,0.06,0.1])for(const fin of t3?['none','wl','all']:['none','wl'])for(const ini of t3?['none','wl','all']:['none','wl'])for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of hasL?(G.sp==='농구'?[1]:[0,1]):[0]){
+  for(const tol of [0.03,0.06,0.1])for(const fin of t3?['wl','all']:['wl'])for(const ini of mv?(t3?['wl','all']:['wl']):(t3?['none','wl','all']:['none','wl']))for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of hasL?(G.sp==='농구'?[1]:[0,1]):[0]){
     if(fin==='none'&&ini==='none')continue;
     const T=tol+1e-9,fj=fin==='all'?js:fin==='wl'?[0,2]:[],ij=ini==='all'?js:ini==='wl'?[0,2]:[];
     const out=pre.filter(x=>fj.every(j=>Math.abs(x.f[j]-G.o[j])<=T)&&ij.every(j=>Math.abs(x.i[j]-Gi[j])<=T)&&(chg!=='mv'||(x.ch>0)===mv)&&(chg!=='cnt'||x.ch===(G.c||0))&&(!vote||js.every(j=>Math.abs(x.v[j]-V[j])<=vt))&&(!li||x.il===gil));

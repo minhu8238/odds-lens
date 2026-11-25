@@ -11,9 +11,9 @@ const rows = zlib.gunzipSync(fs.readFileSync(file)).toString().split('\n').filte
 const MINN = 4, TOLS = [0.03, 0.06, 0.1];
 const vok = v => v.every(x => x >= 0) && v.reduce((a, b) => a + b, 0) > 50;
 // 조합 목록 (페이지와 같음)
-function combos(n3, h3, hasV) {
+function combos(n3, h3, hasV, moved) {
   const out = [];
-  for (const ti of [0, 1, 2]) for (const fin of (n3 || h3) ? ['none', 'wl', 'all'] : ['none', 'wl']) for (const ini of (n3 || h3) ? ['none', 'wl', 'all'] : ['none', 'wl'])
+  for (const ti of [0, 1, 2]) for (const fin of (n3 || h3) ? ['wl', 'all'] : ['wl']) for (const ini of moved ? ((n3 || h3) ? ['wl', 'all'] : ['wl']) : ((n3 || h3) ? ['none', 'wl', 'all'] : ['none', 'wl']))
     for (const chg of ['none', 'mv', 'cnt']) for (const vote of hasV ? ['none', 'n', 'nh'] : ['none']) for (const hli of (process.env.FORCEL ? [1] : [0, 1])) {
       if (fin === 'none' && ini === 'none') continue;
       out.push({ ti, fin, ini, chg, vote, hli, key: [TOLS[ti].toFixed(2), fin, ini, chg, vote, hli].join('|') })
@@ -46,7 +46,7 @@ for (let ti = start; ti < rows.length; ti++) {
     hl: x.ihc === G.ihc
   }));
   const agg = { N: {}, H: {} }; // 결론 판정 재현용: 결과별 조합 수·같은 쪽 수·경기수 가중 차이
-  for (const c of combos(n3, h3, hasV)) {
+  for (const c of combos(n3, h3, hasV, G.nch > 0 || G.hch > 0)) {
     const T = TOLS[c.ti] + 1e-9;
     const m = F.filter(f => (c.fin === 'none' || (c.fin === 'wl' ? f.fwl : f.fall) <= T) && (c.ini === 'none' || (c.ini === 'wl' ? f.iwl : f.iall) <= T)
       && (c.chg !== 'mv' || f.mv) && (c.chg !== 'cnt' || f.cnt) && (c.vote === 'none' || (f.vn && (c.vote === 'n' || f.vh))) && (!c.hli || f.hl));
