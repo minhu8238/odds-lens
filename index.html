@@ -344,25 +344,52 @@ function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0,isO=i
   const sub=rows.filter(x=>(!x.rd||x.rd<round)&&x.ln===(H.ln||0)&&Math.abs(x.nf[0]-N.o[0])<=e&&Math.abs(x.nf[2]-N.o[2])<=e&&Math.abs(x.hf[0]-H.o[0])<=e&&Math.abs(x.hf[2]-H.o[2])<=e);
   const vs=v=>v&&v.reduce((a,b)=>a+b,0)>50,hasV=vs(N.v);
   const list=sheetCombos(n3,h3,hasV).map(({c,lab})=>{const r=sheetFind(sub,N,H,c,round);return {lab,n:r.n,N:r.N,H:r.H}});
-  const sum=[];for(const m of ['N','H'])for(const s0 of list[0][m]){const cs=list.filter(x=>x.n>0).map(x=>({n:x.n,s:x[m].find(q=>q.j===s0.j)}));
-    const ns=cs.map(x=>x.n).sort((a,b)=>a-b);
-    sum.push({m,j:s0.j,lab:(m==='N'?NLAB(n3):HLAB(h3,isO))[s0.j],tot:cs.length,pos:cs.filter(x=>x.s.res>0).length,
-      act:cs.length?cs.reduce((a,x)=>a+x.s.act,0)/cs.length:0,exp:cs.length?cs.reduce((a,x)=>a+x.s.exp,0)/cs.length:0,
-      roi:cs.length?cs.reduce((a,x)=>a+x.s.roi,0)/cs.length:0,med:ns.length?ns[ns.length>>1]:0,max:ns.length?ns[ns.length-1]:0})}
-  const best=sum.filter(x=>x.tot&&x.pos/x.tot>0.5).sort((a,b)=>(b.pos/b.tot-a.pos/a.tot)||(b.med-a.med))[0]||null;
+  const {sum,best}=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO));
   return {list,sum,best,total:list.length,n3,h3,isO,N0:N,H0:H}}
+function sumOf(list,labOf){const sum=[];for(const m of ['N','H'])for(const s0 of list[0][m]){const cs=list.filter(x=>x.n>0).map(x=>({n:x.n,s:x[m].find(q=>q.j===s0.j)}));
+    const ns=cs.map(x=>x.n).sort((a,b)=>a-b);
+    sum.push({m,j:s0.j,lab:labOf(m)[s0.j],tot:cs.length,pos:cs.filter(x=>x.s.res>0).length,
+      act:cs.length?cs.reduce((a,x)=>a+x.s.act,0)/cs.length:0,exp:cs.length?cs.reduce((a,x)=>a+x.s.exp,0)/cs.length:0,
+      roi:cs.length?cs.reduce((a,x)=>a+x.s.roi,0)/cs.length:0,wres:cs.length?cs.reduce((a,x)=>a+x.n*x.s.res,0)/cs.reduce((a,x)=>a+x.n,0):0,med:ns.length?ns[ns.length>>1]:0,max:ns.length?ns[ns.length-1]:0})}
+  const best=sum.filter(x=>x.tot&&x.pos/x.tot>0.5).sort((a,b)=>(b.pos/b.tot-a.pos/a.tot)||(b.med-a.med))[0]||null;
+  return {sum,best}}
+// ── 시장 하나만 따로(독립 시장): 시장별 과거 데이터에서 그 시장 조건만으로 모든 조합
+const SALL1={},AH={};
+const MKIND=g=>isOU(g)?'ou':/핸디/.test(g.ty)?'handicap':'normal';
+const atlasKey=g=>`${SPE[g.sp]}_${MKIND(g)}_${g.o[1]>0?3:2}`;
+function loadSingle(key){if(AH[key])return AH[key];AH[key]=(async()=>{const rows=[];
+  const P=(rd,l)=>{const a=l.split(',');if(a.length!==18)return null;const r={W:0,D:1,L:2}[a[17]];if(r==null)return null;const n=i=>+a[i];
+    return {rd,dt:a[0],lg:a[1],h:a[2],a:a[3],sc:a[4],i:[n(5),n(6),n(7)],f:[n(8),n(9),n(10)],ch:n(11),il:n(12),ln:n(13),v:[n(14),n(15),n(16)],r}};
+  const t=await fetchText(`data/atlas/${key}.csv.gz`);for(const l of t.split('\n'))if(l){const x=P(0,l);if(x)rows.push(x)}
+  let idx={};try{idx=JSON.parse(await fetchText('data/history_new/index.json?'+Date.now()))}catch(e){}
+  for(const rd of (idx['atlas_'+key]||[])){try{const t2=await fetchText(`data/history_new/${rd}/atlas_${key}.csv?`+Date.now());for(const l of t2.split('\n'))if(l){const x=P(rd,l);if(x)rows.push(x)}}catch(e){}}
+  return rows})();AH[key].catch(()=>{delete AH[key]});return AH[key]}
+function singleAll(rows,G,round){const t3=G.o[1]>0,hasL=MKIND(G)!=='normal',e=0.1+1e-9,Gi=G.i&&G.i[0]>1?G.i:G.o,gil=G.il!=null?G.il:G.ln,mv=(G.c||0)>0;
+  const V=G.v&&G.v.reduce((a,b)=>a+b,0)>50?G.v.map(x=>x/G.v.reduce((a,b)=>a+b,0)*100):null;
+  const pre=rows.filter(x=>(!x.rd||x.rd<round)&&((x.f[1]>1)===t3)&&(!hasL||x.ln===G.ln)&&Math.abs(x.f[0]-G.o[0])<=e&&Math.abs(x.f[2]-G.o[2])<=e);
+  const js=t3?[0,1,2]:[0,2],vt=t3?10:7,list=[];
+  for(const tol of [0.03,0.06,0.1])for(const fin of t3?['wl','all']:['wl'])for(const ini of [0,1])for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of hasL?[0,1]:[0]){
+    const T=tol+1e-9,fj=fin==='all'?js:[0,2];
+    const out=pre.filter(x=>fj.every(j=>Math.abs(x.f[j]-G.o[j])<=T)&&(!ini||[0,2].every(j=>Math.abs(x.i[j]-Gi[j])<=T))&&(chg!=='mv'||(x.ch>0)===mv)&&(chg!=='cnt'||x.ch===(G.c||0))&&(!vote||js.every(j=>Math.abs(x.v[j]-V[j])<=vt))&&(!li||x.il===gil));
+    const n=out.length,side=js.map(j=>{let k=0,ex=0,ret=0;for(const x of out){const sm=js.reduce((a,q)=>a+1/x.f[q],0);ex+=1/x.f[j]/sm;if(x.r===j){k++;ret+=x.f[j]}}return {j,k,act:n?k/n*100:0,exp:n?ex/n*100:0,res:n?(k-ex)/n*100:0,roi:n?(ret/n-1)*100:0}});
+    list.push({lab:[`±${tol.toFixed(2)}`,t3?(fin==='all'?'최종 전부':'최종 승패'):'최종',ini?'초기':'',chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote?'구매율':'',li?'초기 기준점':''].filter(Boolean).join(' · '),n,N:side,H:[]})}
+  const lab=MKIND(G)==='normal'?NLAB(t3):HLAB(t3,isOU(G));const {sum,best}=sumOf(list,()=>lab);
+  return {list,sum,best,total:list.length,single:1,G}}
 async function computeAll(R){const key=R.gmTs+':'+DATA.updated;if(SAKEY===key)return;SAKEY=key;
   for(const pr of sheetPairs(R)){if(SAKEY!==key)return;let rows;try{rows=await loadPairs(PKEY(pr))}catch(e){continue}
     SALL[pr.key]=sheetAll(rows,pr.N,pr.H,R.gmTs);await new Promise(r=>setTimeout(r,0))}
+  const ms=new Map();for(const pr of sheetPairs(R)){ms.set(pr.N.s,pr.N);ms.set(pr.H.s,pr.H)}
+  for(const g of ms.values()){if(SAKEY!==key)return;let rows;try{rows=await loadSingle(atlasKey(g))}catch(e){continue}
+    SALL1[g.s]=singleAll(rows,g,R.gmTs);await new Promise(r=>setTimeout(r,0))}
   if(DATA.rounds[RI]===R)draw()}
 const SAOPEN=new Set();
-function allBox(key){const A=SALL[key];if(!A)return '<div class="allc"><div class="none" style="font-size:12px">모든 조합 비교 중…</div></div>';
+function allBox(key,A0,title){const A=A0===undefined?SALL[key]:A0;title=title||'일반+'+(A&&A.isO?'언오':'핸디')+' 짝';if(!A)return '<div class="allc"><div class="none" style="font-size:12px">'+title+' 모든 조합 비교 중…</div></div>';
   const used=A.list.filter(x=>x.n>0).length;
-  let h=`<div class="allc"><div class="ph">모든 조합 비교 <b>${used}/${A.total}조합</b>에 표본 있음</div>`;
+  let h=`<div class="allc"><div class="ph">${title} · 모든 조합 <b>${used}/${A.total}</b>에 표본 있음</div>`;
   if(!used)return h+'<div class="none" style="font-size:12px">어떤 조합에도 맞는 과거 경기가 없어요.</div></div>';
   h+=A.sum.map(x=>{const sh=x.tot?x.pos/x.tot:0;return `<div class="arow ${sh>=0.7?'c':sh<=0.3?'x':''}"><span class="al">${x.lab}</span><span class="ab"><i style="width:${(sh*100).toFixed(0)}%"></i></span><span class="av"><b>${x.pos}/${x.tot}</b> 조합에서 기대 이상<small>평균 ${x.act.toFixed(0)}% (기대 ${x.exp.toFixed(0)}) · 수익 ${x.roi>0?'+':''}${x.roi.toFixed(0)}% · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small></span></div>`}).join('');
   const op=SAOPEN.has(key);h+=`<button class="copen" data-aopen="${key}">${op?'조합 목록 닫기':'조합별 결과 보기'}</button>`;
-  if(op){const labs=[...A.N0?NLAB(A.n3).map((l,j)=>({m:'N',j,l})).filter(x=>x.l):[],...HLAB(A.h3,A.isO).map((l,j)=>({m:'H',j,l})).filter(x=>x.l)];
+  if(op){const labs=A.sum.map(x=>({m:x.m,j:x.j,l:x.lab}));
     h+=`<div class="atbl"><table><tr><th>조합</th><th>경기</th>${labs.map(x=>`<th>${x.l}</th>`).join('')}</tr>${A.list.filter(x=>x.n>0).sort((a,b)=>b.n-a.n).map(x=>`<tr><td>${x.lab}</td><td>${x.n}</td>${labs.map(l=>{const s=x[l.m].find(q=>q.j===l.j);return `<td class="${s.res>0?'pos':s.res<0?'neg':''}">${s.act.toFixed(0)}</td>`}).join('')}</tr>`).join('')}</table></div>`}
   return h+'</div>'}
 const NLAB=t=>t?['승','무','패']:['승','','패'],HLAB=(t,o)=>o?['언더','','오버']:t?['핸승','핸무','핸패']:['핸승','','핸패'];
@@ -384,11 +411,12 @@ function sheetSteps(r){const c=SCOND,f=r.fun||[],a=[`최종 배당 ${f[0]??'-'}`
   if(c.nv||c.hv)a.push(r.nvUsed||r.hvUsed?`구매율 ${r.base??r.n}`:'구매율(아직 없음, 건너뜀)');
   if(r.step==='cnt')a.push(`변경 횟수 ${r.n}`);else if(c.nch||c.hch)a.push('변경 횟수');else if(r.step==='cnt0')a.push('변경 횟수 맞는 경기 0이라 생략');
   return a.join(' → ')}
+const SGLN=g=>MKIND(g)==='normal'?'일반 단독':MKN(isOU(g))+' '+LNS(g)+' 단독';
 function sheetBox(m){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)return '';
-  return m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(h=>{const key=nrow.g.s+':'+h.g.s,r=SRES[key];const ln=MKN(isOU(h.g))+' '+LNS(h.g);
-    if(!r)return `<div class="sbox"><div class="ph">시트 분석 · 일반 + ${ln}</div><div class="none">찾는 중…</div>${allBox(key)}</div>`;
+  return `<div class="sbox">${allBox('S'+nrow.g.s,SALL1[nrow.g.s]||null,SGLN(nrow.g))}</div>`+m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(h=>{const key=nrow.g.s+':'+h.g.s,r=SRES[key];const ln=MKN(isOU(h.g))+' '+LNS(h.g);
+    if(!r)return `<div class="sbox"><div class="ph">시트 분석 · 일반 + ${ln}</div><div class="none">찾는 중…</div>${allBox(key)}${allBox('S'+h.g.s,SALL1[h.g.s]||null,SGLN(h.g))}</div>`;
     const open=SOPEN.has(key);
-    let html=`<div class="sbox" data-skey="${key}"><div class="ph">시트 분석 · 일반 + ${ln} <b>${r.n}경기</b>${r.n&&r.n<30?' <span class="few">적음</span>':''}</div><div class="none" style="font-size:12px;padding:0 0 6px">${sheetSteps(r)}</div>${allBox(key)}${r.n?sheetCards(r):'<div class="none">조건에 맞는 과거 경기가 없어요. 조건을 줄여 보세요.</div>'}
+    let html=`<div class="sbox" data-skey="${key}"><div class="ph">시트 분석 · 일반 + ${ln} <b>${r.n}경기</b>${r.n&&r.n<30?' <span class="few">적음</span>':''}</div><div class="none" style="font-size:12px;padding:0 0 6px">${sheetSteps(r)}</div>${allBox(key)}${allBox('S'+h.g.s,SALL1[h.g.s]||null,SGLN(h.g))}${r.n?sheetCards(r):'<div class="none">조건에 맞는 과거 경기가 없어요. 조건을 줄여 보세요.</div>'}
       <button class="copen" data-sopen>${open?'조건·목록 닫기':'조건 바꾸기 · 경기 목록'}</button>`;
     if(open){html+=condChips(r.N0,r.H0);
       const pk=(a,t)=>t?a:[a[0],a[2]];const od=(f,i,t)=>pk(f,t).map((v,k)=>{const iv=pk(i,t)[k];return `<span class="o">${Math.abs(v-iv)>=0.005&&iv>1?`<span class="ch">${iv.toFixed(2)}→</span>`:''}${v.toFixed(2)}</span>`}).join('');
@@ -408,10 +436,11 @@ function drawBrief(rows,R,now){
   let h=`<h2>시트 방식 자동 분석</h2><div class="counts"><span><b>${sp.length}</b>경기</span><span style="flex:1"></span></div><div class="none" style="font-size:12px;padding:2px 0 4px">기본 순서: 일반·핸디 최종 승·패 배당 ±${SCOND.tol.toFixed(2)} (핸디 기준점 같음) → 일반·핸디 변경 유무 → ${SAUTO}경기 이상 남으면 변경 횟수까지. 구매율은 경기 블록에서 켜서 비교할 수 있어요. 경기 블록에서 조건을 바꾸면 전체에 같이 적용돼요.</div>`;
   h+=sp.length?sp.slice(0,15).map(({pr,r})=>{const b=r.best,g=b.m==='N'?pr.N:pr.H,lab=(b.m==='N'?NLAB(r.n3):HLAB(r.h3,r.isO))[b.s.j];
     return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} ${MKN(isOU(pr.H))} ${LNS(pr.H)}</small></span><span class="s"><b style="color:var(--felt)">${lab} ${g.o[b.s.j].toFixed(2)}</b><small>${r.n}경기${r.n<30?' <span class="few">적음</span>':''} ${b.s.act.toFixed(0)}% (기대 ${b.s.exp.toFixed(0)}%)</small><small>수익 ${b.s.roi>0?'+':''}${b.s.roi.toFixed(0)}%</small></span></button>`}).join(''):`<div class="none">${SKEY?'조건에 맞는 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
-  const ap=sheetPairs(R).map(pr=>({pr,A:SALL[pr.key]})).filter(x=>x.A&&x.A.best&&x.pr.N.t>now).sort((a,b)=>((b.A.best.pos/b.A.best.tot>=0.7)-(a.A.best.pos/a.A.best.tot>=0.7))||(b.A.best.max-a.A.best.max));
-  h+=`<h2 style="margin-top:22px">모든 조합 자동 비교</h2><div class="none" style="font-size:12px;padding:2px 0 4px">허용폭 3가지 × 최종 승패/전부 × 초기 배당 × 변경(안 봄·유무·횟수) × 구매율(안 봄·일반·일반+핸디) × 핸디 초기선, 최대 216개 조합을 전부 돌려요. 한 조합만 고르면 우연히 100%가 쉽게 나오니까, 여러 조합에서 같은 결과가 기대보다 많이 나왔는지 봐요. 70% 넘는 조합에서 같은 방향인 경기 중 표본이 큰 순서예요. 표본은 '가운데~가장 넓은 조합' 경기 수예요.</div>`;
-  h+=ap.length?ap.slice(0,15).map(({pr,A})=>{const b=A.best,g=b.m==='N'?pr.N:pr.H;
-    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} ${MKN(isOU(pr.H))} ${LNS(pr.H)}</small></span><span class="s"><b style="color:var(--felt)">${b.lab} ${g.o[b.j].toFixed(2)}</b><small>${b.pos}/${b.tot}조합 기대 이상</small><small>평균 ${b.act.toFixed(0)}% (기대 ${b.exp.toFixed(0)}) · 표본 ${b.med}~${b.max}경기${b.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'모든 조합을 비교하는 중이거나, 절반 넘는 조합에서 같은 방향인 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
+  const sgl=[],seenG=new Set();for(const pr of sheetPairs(R))for(const g of [pr.N,pr.H])if(!seenG.has(g.s)){seenG.add(g.s);sgl.push({pr:{N:pr.N,H:g},A:SALL1[g.s],t:SGLN(g)})}
+  const ap=[...sheetPairs(R).map(pr=>({pr,A:SALL[pr.key],t:'일반+'+MKN(isOU(pr.H))+' '+LNS(pr.H)})),...sgl].filter(x=>x.A&&x.A.best&&x.pr.N.t>now).sort((a,b)=>((b.A.best.pos/b.A.best.tot>=0.7)-(a.A.best.pos/a.A.best.tot>=0.7))||(b.A.best.wres*b.A.best.med/(b.A.best.med+30)-a.A.best.wres*a.A.best.med/(a.A.best.med+30)));
+  h+=`<h2 style="margin-top:22px">모든 조합 자동 비교</h2><div class="none" style="font-size:12px;padding:2px 0 4px">일반+핸디·일반+언오 짝으로 최대 216개, 일반·핸디·언오 시장 하나씩 따로(단독)도 최대 144개 조합을 전부 돌려요. 허용폭 3가지 × 최종 승패/전부 × 초기 배당 × 변경(안 봄·유무·횟수) × 구매율 × 초기 기준점. 한 조합만 고르면 우연히 100%가 쉽게 나오니까, 여러 조합에서 같은 결과가 기대보다 많이 나왔는지 봐요. 70% 넘는 조합에서 같은 방향인 것 중, 기대보다 더 나온 폭을 표본 크기만큼 믿어서(표본 30경기면 절반만 반영) 높은 순서예요. 1~2경기짜리 100%가 위로 튀지 않게 하려는 거예요. 표본은 '가운데~가장 넓은 조합' 경기 수예요.</div>`;
+  h+=ap.length?ap.slice(0,20).map(({pr,A,t})=>{const b=A.best,g=A.single?pr.H:b.m==='N'?pr.N:pr.H;
+    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} ${t}</small></span><span class="s"><b style="color:var(--felt)">${b.lab} ${g.o[b.j].toFixed(2)}</b><small>${b.pos}/${b.tot}조합 기대 이상 · 차이 ${b.wres>0?'+':''}${b.wres.toFixed(1)}%p</small><small>평균 ${b.act.toFixed(0)}% (기대 ${b.exp.toFixed(0)}) · 표본 ${b.med}~${b.max}경기${b.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'모든 조합을 비교하는 중이거나, 절반 넘는 조합에서 같은 방향인 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
   h+=`<h3 style="margin-top:22px">최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
     const mvs=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');

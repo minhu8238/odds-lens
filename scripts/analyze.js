@@ -111,7 +111,7 @@ function analyzeMarket(g, round) {
 {
   const nd = path.join(DATA, 'history_new'), idx = {};
   if (fs.existsSync(nd)) for (const rd of fs.readdirSync(nd).filter(x => /^\d+$/.test(x)).sort())
-    for (const f of fs.readdirSync(path.join(nd, rd))) { const m = f.match(/^(ou)?pair_(\w+)\.csv$/); if (m) { const k = (m[1] ? 'ou_' : '') + m[2]; (idx[k] = idx[k] || []).push(+rd) } }
+    for (const f of fs.readdirSync(path.join(nd, rd))) { const m = f.match(/^(ou)?pair_(\w+)\.csv$/); if (m) { const k = (m[1] ? 'ou_' : '') + m[2]; (idx[k] = idx[k] || []).push(+rd) } const m2 = f.match(/^atlas_(\w+)\.csv$/); if (m2) (idx['atlas_' + m2[1]] = idx['atlas_' + m2[1]] || []).push(+rd) }
   if (fs.existsSync(nd)) fs.writeFileSync(path.join(nd, 'index.json'), JSON.stringify(idx));
 }
 const snap = JSON.parse(fs.readFileSync(path.join(DATA, 'latest.json'), 'utf8'));
