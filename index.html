@@ -124,7 +124,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .cres{padding:8px 12px 10px}.chead{font-size:14px}.chead small{display:block;color:var(--mute);font-size:11px}
 .tally{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:13px}.tally b{font-weight:700}.tally small{color:var(--mute)}
 .allc{margin:8px 0 4px;padding:8px 0 2px;border-top:1px solid var(--line)}.arow{display:grid;grid-template-columns:34px 54px 1fr;gap:8px;align-items:center;font-size:12px;margin-top:5px}.arow .al{font-weight:700}.arow .ab{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.arow .ab i{display:block;height:100%;background:var(--mute)}.arow.c .ab i{background:var(--felt)}.arow.x .ab i{background:var(--brick)}.arow .av small{display:block;color:var(--faint)}.atbl{overflow-x:auto;margin-top:6px}.atbl table{border-collapse:collapse;font-size:11px;width:100%}.atbl td,.atbl th{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.atbl td:first-child,.atbl th:first-child{text-align:left;white-space:normal}.atbl .pos{color:var(--felt);font-weight:700}.atbl .neg{color:var(--brick)}
-.concl .ph small{color:var(--faint);font-weight:400;margin-left:6px}.vrow{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.vrow:first-of-type{border-top:0}.vm{color:var(--mute);font-weight:600}.vb b{font-size:15px}.vb small{display:block;color:var(--faint);font-size:12px;margin-top:2px}.vb .vwarn{color:var(--amber)}.vres{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:2px}.vres.ok{background:#e3efe7;color:var(--felt)}.vres.no{background:#f5e3e0;color:var(--brick)}
+.concl .ph small{color:var(--faint);font-weight:400;margin-left:6px}.vrow{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.vrow:first-of-type{border-top:0}.vm{color:var(--mute);font-weight:600}.vb b{font-size:15px}.vb small{display:block;color:var(--faint);font-size:12px;margin-top:2px}.vb .vwarn{color:var(--amber)}.vb .vchg{color:var(--brick)}.vres{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:2px}.vres.ok{background:#e3efe7;color:var(--felt)}.vres.no{background:#f5e3e0;color:var(--brick)}
 .clist{margin-top:8px}.crow{background:var(--surface);border-radius:var(--r-sm);padding:7px 9px;margin-top:6px;font-size:12px}
 .c1{color:var(--ink2);line-height:1.35}.c1 b{color:var(--ink);font-weight:600}.cd{color:var(--mute)}
 .c2{display:grid;grid-template-columns:minmax(30px,max-content) 1fr auto 40px;gap:6px;align-items:center;margin-top:3px}
@@ -432,8 +432,8 @@ function mVerdict(g,sources){const c=[];let pend=false,mt=0;
   if(!best){ // 4경기 이상 남는 조합이 없으면: 1~3경기 조합에서 100%로 같은 쪽이고 3경기짜리가 있으면 '보통', 아니면 '약함'
     const d=[];for(const q of sources){if(!q.A||!q.A.sum1)continue;for(const x of q.A.sum1){if(x.m!==q.m||!x.tot||x.wres<=0||x.pos/x.tot<0.7)continue;d.push({x,sc:x.wres*x.max,name:q.name})}}
     d.sort((a,b)=>b.sc-a.sc);best=d[0];if(!best)return {g,none:true,pend};
-    const full=best.x.wact>=99.5&&best.x.max>=3;return {g,best,other:d.find(q=>q.x.j!==best.x.j),sc:0,small:1,grade:full?['보통','var(--amber)']:['약함','var(--mute)']}}
-  const other=c.find(q=>q.x.j!==best.x.j);return {g,best,other,sc:best.sc,grade:GRADE(best.x)}}
+    const full=best.x.wact>=99.5&&best.x.max>=3;return {g,best,other:d.find(q=>q.x.j!==best.x.j),sc:0,small:1,pend,grade:full?['보통','var(--amber)']:['약함','var(--mute)']}}
+  const other=c.find(q=>q.x.j!==best.x.j);return {g,best,other,sc:best.sc,pend,grade:GRADE(best.x)}}
 function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
   const out=[mVerdict(N,[{A:SALL1[N.s],m:'N',name:'일반 단독'},...ps.map(p=>({A:SALL[p.key],m:'N',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'}))])];
   for(const p of ps){const srcS={A:SALL1[p.H.s],m:'N',name:SGLN(p.H)},srcP={A:SALL[p.key],m:'H',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'};
@@ -442,9 +442,18 @@ function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
     else out.push(mVerdict(p.H,[srcS,srcP]))}
   return out}
 const VMK=g=>MKIND(g)==='normal'?'일반':MKN(isOU(g))+' '+LNS(g);
-function vLine(v){if(v.none)return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:var(--mute)">${v.pend?'분석 중…':'뚜렷한 쪽 없음'}</b>${v.pend?'':'<small>비슷한 과거 경기 결과가 배당 확률과 거의 같거나, 4경기 이상 남는 조건이 없어요</small>'}</span></div>`;
+// 판정 기록: 이 폰에서 전에 본 판정과 달라졌으면 무엇이 바뀌어서인지 표시
+const VH=store.get('lens.vh',{});let VHT=0;
+function vHist(v){if(v.pend)return '';const k=v.g.s+'',cur=v.none?'없음':v.best.x.lab+' '+v.grade[0],vt=(v.g.v||[]).reduce((a,b)=>a+b,0),od=v.g.o.join('/');
+  const old=VH[k];let note='';
+  if(old&&old.c!==cur){const why=old.o!==od?'배당이 바뀌어서':Math.abs(vt-old.vt)>Math.max(50,old.vt*0.1)?'구매율이 쌓여서':'분석 방식이 바뀌어서';
+    note=`<small class="vchg">전에는 ${old.c} (${old.t}) → ${why} 바뀌었어요</small>`}
+  if(!old||old.c!==cur){const d=new Date();VH[k]={c:cur,o:od,vt,t:`${d.getHours()}:${String(d.getMinutes()).padStart(2,'0')}`,p:old&&old.c!==cur?{c:old.c,t:old.t}:old&&old.p||null};clearTimeout(VHT);VHT=setTimeout(()=>{const ks=Object.keys(VH);if(ks.length>3000)ks.slice(0,ks.length-3000).forEach(q=>delete VH[q]);store.set('lens.vh',VH)},500)}
+  else if(old.p&&!note){note=`<small class="vchg">전에는 ${old.p.c} (${old.p.t})였어요</small>`}
+  return note}
+function vLine(v){if(v.none)return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:var(--mute)">${v.pend?'분석 중…':'뚜렷한 쪽 없음'}</b>${v.pend?'':'<small>비슷한 과거 경기 결과가 배당 확률과 거의 같거나, 4경기 이상 남는 조건이 없어요</small>'}${vHist(v)}</span></div>`;
   const x=v.best.x,rr=['0','1','2'].includes(String(v.g.res))?+v.g.res:-1,done=rr>=0,hit=rr===x.j;
-  return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}${v.grade[0]==='약함'?' (살짝 이쪽)':''}</b>${done?`<span class="vres ${hit?'ok':'no'}">${hit?'맞음':'틀림'}</span>`:''}<small>비슷한 과거 경기에서 ${x.wact.toFixed(0)}% 나옴 (배당상 ${x.wexp.toFixed(0)}%) · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small>${x.big?`<small>가장 넓게 보면 ${x.big.n}경기 중 ${x.big.s.k}번 (${x.big.s.act.toFixed(0)}%, 배당상 ${x.big.s.exp.toFixed(0)}%)${x.med<10?` · 조건을 좁힌 조합은 대부분 ${x.med}경기 안팎이라 덜 믿어요`:''}</small>`:''}<small>근거: ${v.best.name}, ${AGREE(x)}</small>${v.other?`<small class="vwarn">${v.other.name}은 ${v.other.x.lab} 쪽이었지만 표본 ${v.other.x.med}~${v.other.x.max}경기로 근거가 더 약해요</small>`:''}</span></div>`}
+  return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}${v.grade[0]==='약함'?' (살짝 이쪽)':''}</b>${done?`<span class="vres ${hit?'ok':'no'}">${hit?'맞음':'틀림'}</span>`:''}<small>비슷한 과거 경기에서 ${x.wact.toFixed(0)}% 나옴 (배당상 ${x.wexp.toFixed(0)}%) · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small>${x.big?`<small>가장 넓게 보면 ${x.big.n}경기 중 ${x.big.s.k}번 (${x.big.s.act.toFixed(0)}%, 배당상 ${x.big.s.exp.toFixed(0)}%)${x.med<10?` · 조건을 좁힌 조합은 대부분 ${x.med}경기 안팎이라 덜 믿어요`:''}</small>`:''}<small>근거: ${v.best.name}, ${AGREE(x)}</small>${vHist(v)}${v.other?`<small class="vwarn">${v.other.name}은 ${v.other.x.lab} 쪽이었지만 표본 ${v.other.x.med}~${v.other.x.max}경기로 근거가 더 약해요</small>`:''}</span></div>`}
 const SDET=new Set();
 function sheetBox(m){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)return '';
   const Hs=m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(x=>x.g),dk=String(nrow.g.s),dop=SDET.has(dk);
