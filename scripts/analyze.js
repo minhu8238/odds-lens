@@ -3,10 +3,10 @@
 //   final(최종): 최종 내재확률 결과별 ±1%p, 최종 기준점 같음
 //   both(초기+최종): 초기·최종 내재확률 결과별 ±2%p(2way ±1.5%p), 결과별 움직임 방향 같음, 배당 변경 여부 같음, 초기·최종 기준점 같음
 //   2차: 위 결과에서 구매율 결과별 ±10%p(2way ±7%p)
-// 결과별 판정(ATLAS 규칙): 30경기 이상 + 두 기간(~2022, 2023~) 각각 10경기 이상일 때
+// 결과별 판정(ATLAS 규칙, 표본 수 기준 없음):
 //   후보 = 두 기간 모두 기대보다 더 맞음 + 오즈 판단 신호(배당 내려감 + 구매율이 배당 확률보다 5%p 이상 낮음)
 //   피하기 = 두 기간 모두 덜 맞음, 또는 대중 추격 신호(배당 올라감 + 구매 몰림)
-//   좋음 = 두 기간 모두 더 맞음(신호 판단 불가/최종 방식) · 보류 = 표본 부족 · 패스 = 그 외
+//   좋음 = 두 기간 모두 더 맞음(신호 판단 불가/최종 방식) · 패스 = 그 외 · 없음 = 비슷한 경기 0개
 const fs = require('fs'), path = require('path'), zlib = require('zlib');
 const { marketKey } = require('./model.js');
 const DATA = path.join(__dirname, '..', 'data');
@@ -67,12 +67,15 @@ function sigClass(io, fo, ep, vote) {
   const heat = vote - ep, pct = (fo - io) / io * 100;
   if (pct <= -0.3 && heat <= -5) return 'judge'; if (pct <= -0.3 && heat >= 5) return 'money'; if (pct >= 0.3 && heat >= 5) return 'chase'; return 'none';
 }
+// 표본 수 기준 없이 방향만으로 판정 (표본이 적으면 페이지에서 '적음'으로 표시)
+// 좋은 방향 = 전체 차이 > 0 이고, 경기가 있는 기간(~2022, 2023~)은 모두 > 0. 나쁜 방향은 반대.
 function verdict(s, sA, sB, sig) {
-  const en = s.n >= 30, per = sA.n >= 10 && sB.n >= 10, good = en && per && s.res > 0 && sA.res > 0 && sB.res > 0, bad = en && per && s.res < 0 && sA.res < 0 && sB.res < 0;
+  if (!s.n) return 'none';
+  const per = [sA, sB].filter(x => x.n > 0);
+  const good = s.res > 0 && per.every(x => x.res > 0), bad = s.res < 0 && per.every(x => x.res < 0);
   if (sig === 'judge' && good) return 'go';
   if (sig === 'chase') return 'no';
   if (bad) return 'no';
-  if (!en || !per) return 'hold';
   if (sig === 'na' || sig === 'fin') return good ? 'good' : 'pass';
   return 'pass';
 }

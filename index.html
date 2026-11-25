@@ -155,7 +155,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   <div id="list"></div>
   <div class="foot">
     배트맨 공식 데이터를 받아와 ODDS ATLAS 규칙으로 자동 분석해요. 시장 줄을 누르면 배당 흐름과 ATLAS 결과, 비슷한 과거 경기 목록이 열려요.<br>
-    <b>후보</b> 과거 결과가 두 기간 모두 기대보다 좋고 오즈 판단 신호(배당 내려감 + 구매율이 배당 확률보다 5%p 이상 낮음)까지 같은 방향 · <b>좋음</b> 두 기간 모두 기대보다 좋음 · <b>피하기</b> 두 기간 모두 기대보다 나쁨 또는 대중 추격 신호 · <b>보류</b> 30경기 미만 또는 한 기간 10경기 미만 · <b>패스</b> 그 외.
+    <b>후보</b> 과거 결과가 전체와 경기가 있는 기간 모두 기대보다 좋고 오즈 판단 신호(배당 내려감 + 구매율이 배당 확률보다 5%p 이상 낮음)까지 같은 방향 · <b>좋음</b> 두 기간 모두 기대보다 좋음 · <b>피하기</b> 두 기간 모두 기대보다 나쁨 또는 대중 추격 신호 · <b>패스</b> 그 외. 표본 수와 상관없이 같은 기준으로 판정하고 30경기 미만이면 <b>적음</b>을 붙여요.
   </div>
 </div>
 <script>
@@ -177,8 +177,8 @@ function buildPairs(gmTs){
     (PM[ns]=PM[ns]||[]).push(e);
     if(!SM[ns]||SM[ns].n<e.n)SM[ns]={s:x.nrm,n:x.n,lv};SM[hs]={s:x.hdc,n:x.n,lv}}
   return {SM,PM}}
-const VDL={go:'후보',good:'좋음',no:'피하기',hold:'보류',pass:'패스'},SGL={judge:'오즈 판단',money:'돈 맞추기',chase:'대중 추격',none:'신호 없음',na:'—',fin:'—'};
-const VRANK={go:3,good:2,no:1};
+const VDL={go:'후보',good:'좋음',no:'피하기',hold:'보류',pass:'패스',none:'없음'},SGL={judge:'오즈 판단',money:'돈 맞추기',chase:'대중 추격',none:'신호 없음',na:'—',fin:'—'};
+const VRANK={go:3,good:2,no:1};const FEW=n=>n<30?' <span class="few">적음</span>':'';
 function applySig(a,x){a.up=a.fo.map(()=>[]);a.dn=a.fo.map(()=>[]);a.mtags=a.tags.slice();a.mcls=a.cls;a.tags=a.fo.map(()=>'');a.cls='';a.best=-1;a.at=x||null;a.vd=a.fo.map(()=>null);
   if(!x)return;const js=a.three?[0,1,2]:[0,2];
   js.forEach((jj,k)=>{const sb=x.modes.both.slots[k],sf=x.modes.final.slots[k];let v=null,from='';
@@ -267,9 +267,9 @@ async function computeRecs(R){
 function drawBrief(rows,R,now){
   const up=rows.filter(x=>x.g.t>now&&x.a.at);
   const items=[];up.forEach(x=>x.a.vd.forEach((v,k)=>{if(v)items.push({x,k,v})}));
-  const pick=t=>items.filter(i=>i.v.vd===t).sort((p,q)=>(q.v.s.res||0)-(p.v.s.res||0));
-  const go=pick('go'),good=pick('good'),no=pick('no').sort((p,q)=>(p.v.s.res||0)-(q.v.s.res||0));
-  const line=({x,k,v},col)=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}${(x.a.isH||x.a.isO)&&x.g.ln?' '+(x.a.isH&&x.g.ln>0?'+':'')+x.g.ln:''}</small></span><span class="s"><b style="color:${col}">${x.a.lab[k]} ${x.a.fo[k].toFixed(2)}</b><small>${v.m} ${v.s.n}경기 ${v.s.act}% (기대 ${v.s.exp}%)</small><small>~2022 ${v.s.resA>0?'+':''}${v.s.resA} · 2023~ ${v.s.resB>0?'+':''}${v.s.resB}${v.s.sig==='judge'?' · 오즈 판단':''}</small></span></button>`;
+  const pick=t=>items.filter(i=>i.v.vd===t).sort((p,q)=>((q.v.s.n>=30)-(p.v.s.n>=30))||((q.v.s.res||0)-(p.v.s.res||0)));
+  const go=pick('go'),good=pick('good'),no=pick('no');
+  const line=({x,k,v},col)=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}${(x.a.isH||x.a.isO)&&x.g.ln?' '+(x.a.isH&&x.g.ln>0?'+':'')+x.g.ln:''}</small></span><span class="s"><b style="color:${col}">${x.a.lab[k]} ${x.a.fo[k].toFixed(2)}</b><small>${v.m} ${v.s.n}경기${FEW(v.s.n)} ${v.s.act}% (기대 ${v.s.exp}%)</small><small>~2022 ${v.s.nA?(v.s.resA>0?'+':'')+v.s.resA:'-'} · 2023~ ${v.s.nB?(v.s.resB>0?'+':'')+v.s.resB:'-'}${v.s.sig==='judge'?' · 오즈 판단':''}</small></span></button>`;
   const moves=rows.filter(x=>x.g.t>now&&x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,6);
   let h=`<h2>ODDS ATLAS 자동 분석</h2><div class="counts"><span><b style="color:var(--felt)">${go.length}</b>후보</span><span><b style="color:var(--amber)">${good.length}</b>좋음</span><span><b style="color:var(--brick)">${no.length}</b>피하기</span><span><b>${up.length}</b>시장</span></div>`;
   h+=`<h3>후보 · 과거 결과 좋음 + 오즈 판단 신호</h3>`+(go.length?go.slice(0,10).map(i=>line(i,'var(--felt)')).join(''):'<div class="none">지금은 후보가 없어요. 구매율이 쌓이면 오즈 판단 신호까지 확인해요.</div>');
@@ -279,7 +279,7 @@ function drawBrief(rows,R,now){
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
     const mvs=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
     return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(dtmMs(x.g.lc))}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)} ${mvs}</small></span><span class="s"><small>경기 ${hhmm(x.g.t)}</small></span></button>`}).join(''):'<div class="none">최근 90분 동안 바뀐 배당이 없어요.</div>';
-  h+=`<div class="none" style="font-size:12px;padding-top:10px">ATLAS 규칙: 같은 시장에서 초기+최종(내재확률 ±2%p, 2way ±1.5%p, 움직임 방향·변경 여부·기준점 같음) 또는 최종(±1%p)이 비슷한 과거 경기를 찾고, 구매율이 있으면 ±10%p(2way ±7%p)로 한 번 더 좁혀요. 30경기 이상, 두 기간 각각 10경기 이상일 때만 판정해요. 직전 회차까지의 경기만 써요.</div>`;
+  h+=`<div class="none" style="font-size:12px;padding-top:10px">ATLAS 규칙: 같은 시장에서 초기+최종(내재확률 ±2%p, 2way ±1.5%p, 움직임 방향·변경 여부·기준점 같음) 또는 최종(±1%p)이 비슷한 과거 경기를 찾고, 구매율이 있으면 ±10%p(2way ±7%p)로 한 번 더 좁혀요. 표본 수와 상관없이 같은 기준으로 판정하고, 30경기 미만이면 '적음'을 붙여요. 직전 회차까지의 경기만 써요.</div>`;
   document.getElementById('brief').innerHTML=h;
 }
 // ── 비슷한 과거 경기 찾기 (엑셀 필터를 자동으로)
@@ -360,7 +360,7 @@ const isExtra=x=>!x.a.cls&&x.a.cls!==''&&(/홀짝/.test(x.g.ty)||/전반|후반/
 function rowHTML(x,m,extra){
   const {g,a}=x,k=a.fo.length;
   const line=(a.isH||a.isO)&&g.ln!==0?`<small>${a.isH&&g.ln>0?'+':''}${g.ln}</small>`:'';
-  const vlab=a.best>=0?`<span class="verdict ${a.cls}">${a.lab[a.best]} ${VDL[a.vd[a.best].vd]}</span>`:a.cls==='x'?`<span class="verdict x">${a.lab.filter((_,k)=>a.tags[k]==='x').join('·')} 피하기</span>`:'';
+  const vlab=a.best>=0?`<span class="verdict ${a.cls}">${a.lab[a.best]} ${VDL[a.vd[a.best].vd]}${a.vd[a.best].s.n<30?' · 적음':''}</span>`:a.cls==='x'?`<span class="verdict x">${a.lab.filter((_,k)=>a.tags[k]==='x').join('·')} 피하기</span>`:'';
   const cells=a.fo.map((o,j)=>{const d=o-a.io[j];const mv=Math.abs(d)>=.005?`<div class="mv ${d<0?'dn':'up'}">${d<0?'▼':'▲'} ${a.io[j].toFixed(2)}</div>`:'<div class="mv"></div>';
     return `<div class="cell ${a.tags[j]}"><div class="sl">${a.lab[j]}</div><div class="od">${o.toFixed(2)}</div>${mv}<div class="vt">${a.V?'구매 '+Math.round(a.V[j]*100)+'%':''}</div></div>`}).join('');
   return `<div class="mrow ${extra} ${OPEN.has(g.s)?'open':''}" role="button" tabindex="0" aria-expanded="${OPEN.has(g.s)}" data-s="${g.s}" style="--k:${k}"><div class="mlab">${marketName(g)}${line}${vlab?'<div>'+vlab+'</div>':''}</div>${cells}<div class="det">${detHTML(x)}</div></div>`}
@@ -394,7 +394,7 @@ function atlasPanel(x){const at=x.a.at;if(!at)return '<h4>ODDS ATLAS</h4><div cl
   <tr><td>2023~</td>${md.slots.map(s=>`<td>${s.nB?(s.resB>0?'+':'')+s.resB+` <small>(${s.nB})</small>`:'–'}</td>`).join('')}</tr>
   <tr><td>ROI</td>${md.slots.map(s=>`<td>${s.n?(s.roi>0?'+':'')+s.roi+'%':'–'}</td>`).join('')}</tr>
   <tr><td>신호</td>${md.slots.map(s=>`<td>${SGL[s.sig]}</td>`).join('')}</tr>
-  <tr><td>판정</td>${md.slots.map(s=>`<td class="${s.vd==='go'||s.vd==='good'?'pos':s.vd==='no'?'neg':''}">${VDL[s.vd]}</td>`).join('')}</tr></table>`;
+  <tr><td>판정</td>${md.slots.map(s=>`<td class="${s.vd==='go'||s.vd==='good'?'pos':s.vd==='no'?'neg':''}">${VDL[s.vd]}${s.n&&s.n<30?'<br><span class="few">적음</span>':''}</td>`).join('')}</tr></table>`;
   if(md.list.length){const three=x.a.three,pk=a=>three?a:[a[0],a[2]],L3=three?['승','무','패']:lab,ri=r=>three?r:(r===2?1:0);
     h+=`<div class="clist">${md.list.map(r=>{const d=r[0];const od=pk(r[6]).map((v,k)=>{const iv=pk(r[5])[k];return `<span class="o">${Math.abs(v-iv)>=.005?`<span class="ch">${iv.toFixed(2)}→</span>`:''}${v.toFixed(2)}</span>`}).join('');
       return `<div class="crow"><div class="c1"><span class="cd">${d.slice(2,4)}.${d.slice(4,6)}.${d.slice(6,8)}</span> ${esc(r[1])} <b>${esc(r[2])}</b> ${esc(r[4])} <b>${esc(r[3])}</b></div><div class="c2"><span class="mk">${x.a.isH||x.a.isO?(r[10]>0&&x.a.isH?'+':'')+r[10]:''}</span><span class="ov">${od}</span><span class="vp">${pk(r[9]).map(v=>v==null?'-':v).join('/')}</span><span class="rs r${ri(r[8])}${three?'':'2'}">${lab[ri(r[8])]}</span></div></div>`}).join('')}</div><div class="note">최근 ${md.list.length}경기만 보여요.</div>`}
