@@ -22,7 +22,7 @@ for (let ti = start; ti < rows.length; ti++) {
   const md = (a, b, idx) => idx.reduce((m, j) => Math.max(m, Math.abs(a[j] - b[j])), 0);
   const F = sub.map(x => ({ x, fwl: md(x.f, G.f, wl), fall: md(x.f, G.f, js), iwl: md(x.i, Gi, wl), iall: md(x.i, Gi, js), mv: (x.ch > 0) === (G.ch > 0), cnt: x.ch === G.ch, vo: !!V && vok(x.v) && js.every(j => Math.abs(x.v[j] - V[j]) <= vt), hl: x.il === G.il }));
   const agg = {}, s0 = js.reduce((a, q) => a + 1 / G.f[q], 0);
-  for (const ti2 of [0, 1, 2]) for (const fin of t3 ? ['none', 'wl', 'all'] : ['none', 'wl']) for (const ini of t3 ? ['none', 'wl', 'all'] : ['none', 'wl']) for (const chg of ['none', 'mv', 'cnt']) for (const vote of V ? [0, 1] : [0]) for (const li of hasL ? [0, 1] : [0]) {
+  for (const ti2 of [0, 1, 2]) for (const fin of t3 ? ['none', 'wl', 'all'] : ['none', 'wl']) for (const ini of t3 ? ['none', 'wl', 'all'] : ['none', 'wl']) for (const chg of ['none', 'mv', 'cnt']) for (const vote of V ? [0, 1] : [0]) for (const li of hasL ? (process.env.FORCEL ? [1] : [0, 1]) : [0]) {
     if (fin === 'none' && ini === 'none') continue;
     const T = TOLS[ti2] + 1e-9;
     const m = F.filter(f => (fin === 'none' || (fin === 'wl' ? f.fwl : f.fall) <= T) && (ini === 'none' || (ini === 'wl' ? f.iwl : f.iall) <= T) && (chg !== 'mv' || f.mv) && (chg !== 'cnt' || f.cnt) && (!vote || f.vo) && (!li || f.hl));
