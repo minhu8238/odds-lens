@@ -349,7 +349,9 @@ function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0,isO=i
   const list=sheetCombos(n3,h3,hasV).map(({c,lab})=>{const r=sheetFind(sub,N,H,c,round);return {lab,n:r.n,N:r.N,H:r.H}});
   const {sum,best}=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO));
   return {list,sum,best,total:list.length,n3,h3,isO,N0:N,H0:H}}
-function sumOf(list,labOf){const sum=[];for(const m of ['N','H'])for(const s0 of list[0][m]){const cs=list.filter(x=>x.n>0).map(x=>({n:x.n,s:x[m].find(q=>q.j===s0.j)}));
+// 조건을 좁혀도 4경기 이상 남는 조합만 판정에 씀 (3경기 이하 조합은 목록에만 보임)
+const MINN=4;
+function sumOf(list,labOf){const sum=[];for(const m of ['N','H'])for(const s0 of list[0][m]){const cs=list.filter(x=>x.n>=MINN).map(x=>({n:x.n,s:x[m].find(q=>q.j===s0.j)}));
     const ns=cs.map(x=>x.n).sort((a,b)=>a-b);
     sum.push({m,j:s0.j,lab:labOf(m)[s0.j],tot:cs.length,pos:cs.filter(x=>x.s.res>0).length,
       act:cs.length?cs.reduce((a,x)=>a+x.s.act,0)/cs.length:0,exp:cs.length?cs.reduce((a,x)=>a+x.s.exp,0)/cs.length:0,
@@ -388,9 +390,9 @@ async function computeAll(R){const key=R.gmTs+':'+DATA.updated;if(SAKEY===key)re
   if(DATA.rounds[RI]===R)draw()}
 const SAOPEN=new Set();
 function allBox(key,A0,title){const A=A0===undefined?SALL[key]:A0;title=title||'일반+'+(A&&A.isO?'언오':'핸디')+' 짝';if(!A)return '<div class="allc"><div class="none" style="font-size:12px">'+title+' 모든 조합 비교 중…</div></div>';
-  const used=A.list.filter(x=>x.n>0).length;
-  let h=`<div class="allc"><div class="ph">${title} · 모든 조합 <b>${used}/${A.total}</b>에 표본 있음</div>`;
-  if(!used)return h+'<div class="none" style="font-size:12px">어떤 조합에도 맞는 과거 경기가 없어요.</div></div>';
+  const used=A.list.filter(x=>x.n>=MINN).length;
+  let h=`<div class="allc"><div class="ph">${title} · 모든 조합 <b>${used}/${A.total}</b>에 4경기 이상</div>`;
+  if(!used)return h+'<div class="none" style="font-size:12px">4경기 이상 남는 조합이 없어요.</div></div>';
   h+=A.sum.map(x=>{const sh=x.tot?x.pos/x.tot:0;return `<div class="arow ${sh>=0.7?'c':sh<=0.3?'x':''}"><span class="al">${x.lab}</span><span class="ab"><i style="width:${(sh*100).toFixed(0)}%"></i></span><span class="av"><b>${x.wact.toFixed(0)}%</b> 나옴 · 배당상 ${x.wexp.toFixed(0)}%<small>${x.tot} 조건 중 ${x.pos}개에서 배당보다 더 나옴 · 수익 ${x.roi>0?'+':''}${x.roi.toFixed(0)}% · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small></span></div>`}).join('');
   const op=SAOPEN.has(key);h+=`<button class="copen" data-aopen="${key}">${op?'조합 목록 닫기':'조합별 결과 보기'}</button>`;
   if(op){const labs=A.sum.map(x=>({m:x.m,j:x.j,l:x.lab}));
@@ -431,7 +433,7 @@ function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
   for(const p of ps)out.push(mVerdict(p.H,[{A:SALL1[p.H.s],m:'N',name:SGLN(p.H)},{A:SALL[p.key],m:'H',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'}]));
   return out}
 const VMK=g=>MKIND(g)==='normal'?'일반':MKN(isOU(g))+' '+LNS(g);
-function vLine(v){if(v.none)return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:var(--mute)">${v.pend?'분석 중…':'뚜렷한 쪽 없음'}</b>${v.pend?'':'<small>비슷한 과거 경기 결과가 배당 확률과 거의 같아요</small>'}</span></div>`;
+function vLine(v){if(v.none)return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:var(--mute)">${v.pend?'분석 중…':'뚜렷한 쪽 없음'}</b>${v.pend?'':'<small>비슷한 과거 경기 결과가 배당 확률과 거의 같거나, 4경기 이상 남는 조건이 없어요</small>'}</span></div>`;
   const x=v.best.x,rr=['0','1','2'].includes(String(v.g.res))?+v.g.res:-1,done=rr>=0,hit=rr===x.j;
   return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}${v.grade[0]==='약함'?' (살짝 이쪽)':''}</b>${done?`<span class="vres ${hit?'ok':'no'}">${hit?'맞음':'틀림'}</span>`:''}<small>비슷한 과거 경기에서 ${x.wact.toFixed(0)}% 나옴 (배당상 ${x.wexp.toFixed(0)}%) · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small>${x.big?`<small>가장 넓게 보면 ${x.big.n}경기 중 ${x.big.s.k}번 (${x.big.s.act.toFixed(0)}%, 배당상 ${x.big.s.exp.toFixed(0)}%)${x.med<10?` · 조건을 좁힌 조합은 대부분 ${x.med}경기 안팎이라 덜 믿어요`:''}</small>`:''}<small>근거: ${v.best.name}, ${AGREE(x)}</small>${v.other?`<small class="vwarn">${v.other.name}은 ${v.other.x.lab} 쪽이었지만 표본 ${v.other.x.med}~${v.other.x.max}경기로 근거가 더 약해요</small>`:''}</span></div>`}
 const SDET=new Set();
@@ -464,7 +466,7 @@ function drawBrief(rows,R,now){
   const vs=[];for(const {N,Hs} of byN.values())for(const v of matchVerdicts(N,Hs))if(!v.none)vs.push({N,v});
   for(let i=vs.length-1;i>=0;i--)if(vs[i].v.grade[0]==='약함')vs.splice(i,1);
   vs.sort((a,b)=>(GRANK(b.v.grade)-GRANK(a.v.grade))||((b.v.best.x.max>=30)-(a.v.best.x.max>=30))||(b.v.best.x.wres-a.v.best.x.wres));
-  h+=`<h2>결론 모음</h2><div class="none" style="font-size:12.5px;padding:2px 0 4px;line-height:1.55">경기·시장마다 일반·핸디·언오 짝 분석과 단독 분석을 전부 돌려서 <b>더 좋은 쪽 하나만</b> 골랐어요. 분석끼리 엇갈리면 표본이 크고 차이가 큰 쪽을 따라요.<br><b style="color:var(--felt)">강함</b> 조건 95% 이상이 같은 쪽 + 배당보다 15%p 이상 더 나옴 · <b style="color:var(--amber)">보통</b> 80% 이상 + 8%p 이상 · 표본 크기와 상관없이 판정하고 30경기 안 되면 <span class="few">적음</span></div>`;
+  h+=`<h2>결론 모음</h2><div class="none" style="font-size:12.5px;padding:2px 0 4px;line-height:1.55">경기·시장마다 일반·핸디·언오 짝 분석과 단독 분석을 전부 돌려서 <b>더 좋은 쪽 하나만</b> 골랐어요. 분석끼리 엇갈리면 표본이 크고 차이가 큰 쪽을 따라요.<br><b style="color:var(--felt)">강함</b> 조건 95% 이상이 같은 쪽 + 배당보다 15%p 이상 더 나옴 · <b style="color:var(--amber)">보통</b> 80% 이상 + 8%p 이상 · 조건을 좁혀도 4경기 이상 남는 조합만 판정에 쓰고, 30경기 안 되면 <span class="few">적음</span></div>`;
   h+=vs.length?vs.slice(0,20).map(({N,v})=>{const x=v.best.x;
     return `<button class="pick" data-s="${N.s}"><span class="t">${hhmm(N.t)}</span><span class="m">${esc(N.h)}<small>${esc(N.a)} 상대, ${esc(N.lg||'')} ${VMK(v.g)}</small></span><span class="s"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}</b><small>과거 ${x.wact.toFixed(0)}% 나옴 · 배당상 ${x.wexp.toFixed(0)}% (+${x.wres.toFixed(0)}%p)</small><small>표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'지금은 뚜렷한 쪽이 있는 시장이 없거나, 아직 분석 중이에요.':'과거 경기를 찾는 중이에요…'}</div>`;
   h+=`<h3 style="margin-top:22px">최근 90분 배당 변동</h3>`;
