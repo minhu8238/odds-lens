@@ -108,7 +108,7 @@ async function post(p, body) {
         const cl = x => String(x == null ? '' : x).replace(/,/g, ' ');
         const ini = g => g.i && g.i.every((x, j) => x > 1 || (j === 1 && !(g.o[1] > 0))) ? g.i : g.o;
         const row = [dtm, cl(N.lg), cl(N.h), cl(N.a), cl(N.sc), ini(N)[0], N.o[1] > 0 ? ini(N)[1] : 0, ini(N)[2], N.o[0], N.o[1] || 0, N.o[2], N.c || 0, ...pct(N.v),
-          H.ln, ini(H)[0], H.o[1] > 0 ? ini(H)[1] : 0, ini(H)[2], H.o[0], H.o[1] || 0, H.o[2], H.c || 0, ...pct(H.v), RES[N.res], RES[H.res]];
+          H.ln, ini(H)[0], H.o[1] > 0 ? ini(H)[1] : 0, ini(H)[2], H.o[0], H.o[1] || 0, H.o[2], H.c || 0, ...pct(H.v), RES[N.res], RES[H.res], H.il != null ? H.il : H.ln];
         const rdDir = path.join(newDir, String(r.gmTs)); fs.mkdirSync(rdDir, { recursive: true });
         fs.appendFileSync(path.join(rdDir, `pair_${sp}.csv`), row.join(',') + '\n'); appended++;
       }

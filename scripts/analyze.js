@@ -107,6 +107,13 @@ function analyzeMarket(g, round) {
   }
   return out;
 }
+// 페이지가 회차별 짝 파일을 찾을 수 있게 목록 작성
+{
+  const nd = path.join(DATA, 'history_new'), idx = {};
+  if (fs.existsSync(nd)) for (const rd of fs.readdirSync(nd).filter(x => /^\d+$/.test(x)).sort())
+    for (const f of fs.readdirSync(path.join(nd, rd))) { const m = f.match(/^pair_(\w+)\.csv$/); if (m) (idx[m[1]] = idx[m[1]] || []).push(+rd) }
+  if (fs.existsSync(nd)) fs.writeFileSync(path.join(nd, 'index.json'), JSON.stringify(idx));
+}
 const snap = JSON.parse(fs.readFileSync(path.join(DATA, 'latest.json'), 'utf8'));
 const out = { updated: snap.updated, method: 'atlas', games: {} };
 let cnt = 0;
