@@ -124,6 +124,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .cres{padding:8px 12px 10px}.chead{font-size:14px}.chead small{display:block;color:var(--mute);font-size:11px}
 .tally{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:13px}.tally b{font-weight:700}.tally small{color:var(--mute)}
 .allc{margin:8px 0 4px;padding:8px 0 2px;border-top:1px solid var(--line)}.arow{display:grid;grid-template-columns:34px 54px 1fr;gap:8px;align-items:center;font-size:12px;margin-top:5px}.arow .al{font-weight:700}.arow .ab{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.arow .ab i{display:block;height:100%;background:var(--mute)}.arow.c .ab i{background:var(--felt)}.arow.x .ab i{background:var(--brick)}.arow .av small{display:block;color:var(--faint)}.atbl{overflow-x:auto;margin-top:6px}.atbl table{border-collapse:collapse;font-size:11px;width:100%}.atbl td,.atbl th{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.atbl td:first-child,.atbl th:first-child{text-align:left;white-space:normal}.atbl .pos{color:var(--felt);font-weight:700}.atbl .neg{color:var(--brick)}
+.concl .ph small{color:var(--faint);font-weight:400;margin-left:6px}.vrow{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.vrow:first-of-type{border-top:0}.vm{color:var(--mute);font-weight:600}.vb b{font-size:15px}.vb small{display:block;color:var(--faint);font-size:12px;margin-top:2px}.vb .vwarn{color:var(--amber)}
 .clist{margin-top:8px}.crow{background:var(--surface);border-radius:var(--r-sm);padding:7px 9px;margin-top:6px;font-size:12px}
 .c1{color:var(--ink2);line-height:1.35}.c1 b{color:var(--ink);font-weight:600}.cd{color:var(--mute)}
 .c2{display:grid;grid-template-columns:minmax(30px,max-content) 1fr auto 40px;gap:6px;align-items:center;margin-top:3px}
@@ -414,8 +415,24 @@ function sheetSteps(r){const c=SCOND,f=r.fun||[],a=[`최종 배당 ${f[0]??'-'}`
 const GRADE=b=>{const sh=b.tot?b.pos/b.tot:0,sc=b.wres*b.med/(b.med+30);return sh>=0.9&&sc>=4?['강함','var(--felt)']:sh>=0.7&&sc>=2?['보통','var(--amber)']:['약함','var(--mute)']};
 const AGREE=b=>{const sh=b.tot?b.pos/b.tot:0;return sh>=0.95?'어떤 조건으로 봐도 같아요':sh>=0.8?'조건 대부분에서 같아요':'조건 절반 넘게 같아요'};
 const SGLN=g=>MKIND(g)==='normal'?'일반 단독':MKN(isOU(g))+' '+LNS(g)+' 단독';
+// ── 결론: 짝·단독 분석을 모두 모아서 시장마다 한 쪽만 고름 (표본 크기로 보정한 차이가 가장 큰 쪽, 조건 70% 이상 같은 방향일 때만)
+function mVerdict(g,sources){const c=[];let pend=false;
+  for(const q of sources){if(!q.A){pend=true;continue}for(const x of q.A.sum){if(x.m!==q.m||!x.tot||x.wres<=0||x.pos/x.tot<0.7)continue;c.push({x,sc:x.wres*x.med/(x.med+30),name:q.name})}}
+  c.sort((a,b)=>b.sc-a.sc);const best=c[0];if(!best||GRADE(best.x)[0]==='약함')return {g,none:true,pend};
+  const other=c.find(q=>q.x.j!==best.x.j);return {g,best,other,sc:best.sc,grade:GRADE(best.x)}}
+function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
+  const out=[mVerdict(N,[{A:SALL1[N.s],m:'N',name:'일반 단독'},...ps.map(p=>({A:SALL[p.key],m:'N',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'}))])];
+  for(const p of ps)out.push(mVerdict(p.H,[{A:SALL1[p.H.s],m:'N',name:SGLN(p.H)},{A:SALL[p.key],m:'H',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'}]));
+  return out}
+const VMK=g=>MKIND(g)==='normal'?'일반':MKN(isOU(g))+' '+LNS(g);
+function vLine(v){if(v.none)return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:var(--mute)">${v.pend?'분석 중…':'뚜렷한 쪽 없음'}</b>${v.pend?'':'<small>비슷한 과거 경기 결과가 배당 확률과 거의 같아요</small>'}</span></div>`;
+  const x=v.best.x;return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}</b><small>비슷한 과거 경기에서 ${x.act.toFixed(0)}% 나옴 (배당상 ${x.exp.toFixed(0)}%) · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small><small>근거: ${v.best.name}, ${AGREE(x)}</small>${v.other?`<small class="vwarn">${v.other.name}은 ${v.other.x.lab} 쪽이었지만 표본 ${v.other.x.med}~${v.other.x.max}경기로 근거가 더 약해요</small>`:''}</span></div>`}
+const SDET=new Set();
 function sheetBox(m){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)return '';
-  return `<div class="sbox">${allBox('S'+nrow.g.s,SALL1[nrow.g.s]||null,SGLN(nrow.g))}</div>`+m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(h=>{const key=nrow.g.s+':'+h.g.s,r=SRES[key];const ln=MKN(isOU(h.g))+' '+LNS(h.g);
+  const Hs=m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(x=>x.g),dk=String(nrow.g.s),dop=SDET.has(dk);
+  const head=`<div class="sbox concl"><div class="ph">결론 <small>어느 쪽이 더 좋은지</small></div>${matchVerdicts(nrow.g,Hs).map(vLine).join('')}<button class="copen" data-sdet="${dk}">${dop?'자세히 닫기':'자세히 (시트 분석 · 모든 조합)'}</button></div>`;
+  if(!dop)return head;
+  return head+`<div class="sbox">${allBox('S'+nrow.g.s,SALL1[nrow.g.s]||null,SGLN(nrow.g))}</div>`+m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(h=>{const key=nrow.g.s+':'+h.g.s,r=SRES[key];const ln=MKN(isOU(h.g))+' '+LNS(h.g);
     if(!r)return `<div class="sbox"><div class="ph">시트 분석 · 일반 + ${ln}</div><div class="none">찾는 중…</div>${allBox(key)}${allBox('S'+h.g.s,SALL1[h.g.s]||null,SGLN(h.g))}</div>`;
     const open=SOPEN.has(key);
     let html=`<div class="sbox" data-skey="${key}"><div class="ph">시트 분석 · 일반 + ${ln} <b>${r.n}경기</b>${r.n&&r.n<30?' <span class="few">적음</span>':''}</div><div class="none" style="font-size:12px;padding:0 0 6px">${sheetSteps(r)}</div>${allBox(key)}${allBox('S'+h.g.s,SALL1[h.g.s]||null,SGLN(h.g))}${r.n?sheetCards(r):'<div class="none">조건에 맞는 과거 경기가 없어요. 조건을 줄여 보세요.</div>'}
@@ -435,15 +452,13 @@ function drawBrief(rows,R,now){
   const line=({x,k,v},col)=>`<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(x.g.t)}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${esc(x.g.lg||'')} ${marketName(x.g)}${(x.a.isH||x.a.isO)&&x.g.ln?' '+(x.a.isH&&x.g.ln>0?'+':'')+x.g.ln:''}</small></span><span class="s"><b style="color:${col}">${x.a.lab[k]} ${x.a.fo[k].toFixed(2)}</b><small>${v.m} ${v.s.n}경기${FEW(v.s.n)} ${v.s.act}% (기대 ${v.s.exp}%)</small><small>~2022 ${v.s.nA?(v.s.resA>0?'+':'')+v.s.resA:'-'} · 2023~ ${v.s.nB?(v.s.resB>0?'+':'')+v.s.resB:'-'}${v.s.sig==='judge'?' · 오즈 판단':''}</small></span></button>`;
   const moves=rows.filter(x=>x.g.t>now&&x.g.lc&&now-dtmMs(x.g.lc)<=90*60000).sort((p,q)=>dtmMs(q.g.lc)-dtmMs(p.g.lc)).slice(0,6);
   const sp=sheetPairs(R).map(pr=>({pr,r:SRES[pr.key]})).filter(x=>x.r&&x.r.best&&x.pr.N.t>now).sort((a,b)=>((b.r.n>=3)-(a.r.n>=3))||(b.r.best.s.res-a.r.best.s.res));
-  let h=`<h2>시트 방식 자동 분석</h2><div class="counts"><span><b>${sp.length}</b>경기</span><span style="flex:1"></span></div><div class="none" style="font-size:12px;padding:2px 0 4px">기본 순서: 일반·핸디 최종 승·패 배당 ±${SCOND.tol.toFixed(2)} (핸디 기준점 같음) → 일반·핸디 변경 유무 → ${SAUTO}경기 이상 남으면 변경 횟수까지. 구매율은 경기 블록에서 켜서 비교할 수 있어요. 경기 블록에서 조건을 바꾸면 전체에 같이 적용돼요.</div>`;
-  h+=sp.length?sp.slice(0,15).map(({pr,r})=>{const b=r.best,g=b.m==='N'?pr.N:pr.H,lab=(b.m==='N'?NLAB(r.n3):HLAB(r.h3,r.isO))[b.s.j];
-    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} ${MKN(isOU(pr.H))} ${LNS(pr.H)}</small></span><span class="s"><b style="color:var(--felt)">${lab} ${g.o[b.s.j].toFixed(2)}</b><small>${r.n}경기${r.n<30?' <span class="few">적음</span>':''} ${b.s.act.toFixed(0)}% 나옴 · 배당상 ${b.s.exp.toFixed(0)}%</small><small>수익 ${b.s.roi>0?'+':''}${b.s.roi.toFixed(0)}%</small></span></button>`}).join(''):`<div class="none">${SKEY?'조건에 맞는 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
-  const sgl=[],seenG=new Set();for(const pr of sheetPairs(R))for(const g of [pr.N,pr.H])if(!seenG.has(g.s)){seenG.add(g.s);sgl.push({pr:{N:pr.N,H:g},A:SALL1[g.s],t:SGLN(g)})}
-  const ap=[...sheetPairs(R).map(pr=>({pr,A:SALL[pr.key],t:'일반+'+MKN(isOU(pr.H))+' '+LNS(pr.H)})),...sgl].filter(x=>x.A&&x.A.best&&x.pr.N.t>now).sort((a,b)=>((b.A.best.pos/b.A.best.tot>=0.7)-(a.A.best.pos/a.A.best.tot>=0.7))||(b.A.best.wres*b.A.best.med/(b.A.best.med+30)-a.A.best.wres*a.A.best.med/(a.A.best.med+30)));
-  h+=`<h2 style="margin-top:22px">모든 조합 자동 비교</h2><div class="none" style="font-size:12.5px;padding:2px 0 4px;line-height:1.55">배당 흐름이 비슷했던 과거 경기에서 <b>배당이 말하는 확률보다 더 자주 나온 결과</b>예요. 조건을 이렇게 저렇게 바꿔 봐도 같은 결과가 나오는지 확인했어요.<br><b style="color:var(--felt)">강함</b> 거의 모든 조건에서 같고, 차이도 크고, 표본도 충분 · <b style="color:var(--amber)">보통</b> 대부분 조건에서 같음 · <b>약함</b> 차이가 작거나 표본이 적음
-<details style="margin-top:4px"><summary>자세히</summary>일반+핸디·일반+언오 짝은 최대 216개, 일반·핸디·언오를 하나씩 따로(단독) 보면 최대 144개 조건 조합을 전부 돌려요(허용폭 3가지 × 최종 승패/전부 × 초기 배당 × 변경 안 봄·유무·횟수 × 구매율 × 초기 기준점). 한 조합만 고르면 1~2경기짜리 100%가 쉽게 나와서, 여러 조합에서 같은 방향인지와 표본 크기를 같이 봐요. 순서는 '배당보다 더 나온 폭'을 표본만큼 믿어서(30경기면 절반 반영) 높은 순이에요. 표본은 '가운데~가장 넓은 조건' 경기 수예요.</details></div>`;
-  h+=ap.length?ap.slice(0,20).map(({pr,A,t})=>{const b=A.best,g=A.single?pr.H:b.m==='N'?pr.N:pr.H;
-    return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} ${t}</small></span><span class="s"><b style="color:${GRADE(b)[1]}">${b.lab} ${g.o[b.j].toFixed(2)} · ${GRADE(b)[0]}</b><small>과거 ${b.act.toFixed(0)}% 나옴 · 배당상 ${b.exp.toFixed(0)}%</small><small>${AGREE(b)} · 표본 ${b.med}~${b.max}경기${b.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'모든 조합을 비교하는 중이거나, 절반 넘는 조합에서 같은 방향인 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
+  let h='';
+  const byN=new Map();for(const pr of sheetPairs(R)){if(pr.N.t<=now)continue;if(!byN.has(pr.N.s))byN.set(pr.N.s,{N:pr.N,Hs:[]});byN.get(pr.N.s).Hs.push(pr.H)}
+  const vs=[];for(const {N,Hs} of byN.values())for(const v of matchVerdicts(N,Hs))if(!v.none)vs.push({N,v});
+  vs.sort((a,b)=>((b.v.grade[0]==='강함')-(a.v.grade[0]==='강함'))||(b.v.sc-a.v.sc));
+  h+=`<h2>결론 모음</h2><div class="none" style="font-size:12.5px;padding:2px 0 4px;line-height:1.55">경기·시장마다 일반·핸디·언오 짝 분석과 단독 분석을 전부 돌려서 <b>더 좋은 쪽 하나만</b> 골랐어요. 분석끼리 엇갈리면 표본이 크고 차이가 큰 쪽을 따라요.<br><b style="color:var(--felt)">강함</b> 거의 모든 조건에서 같고 차이·표본 충분 · <b style="color:var(--amber)">보통</b> 대부분 조건에서 같음 · 뚜렷한 쪽이 없는 시장은 빼요.</div>`;
+  h+=vs.length?vs.slice(0,20).map(({N,v})=>{const x=v.best.x;
+    return `<button class="pick" data-s="${N.s}"><span class="t">${hhmm(N.t)}</span><span class="m">${esc(N.h)}<small>${esc(N.a)} 상대, ${esc(N.lg||'')} ${VMK(v.g)}</small></span><span class="s"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}</b><small>과거 ${x.act.toFixed(0)}% 나옴 · 배당상 ${x.exp.toFixed(0)}%</small><small>표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'지금은 뚜렷한 쪽이 있는 시장이 없거나, 아직 분석 중이에요.':'과거 경기를 찾는 중이에요…'}</div>`;
   h+=`<h3 style="margin-top:22px">최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
     const mvs=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
@@ -583,6 +598,7 @@ document.getElementById('list').addEventListener('click',e=>{
     return}
   const sb=e.target.closest('.sbox');
   if(sb){const key=sb.dataset.skey;
+    if(e.target.closest('[data-sdet]')){const k=e.target.closest('[data-sdet]').dataset.sdet;SDET.has(k)?SDET.delete(k):SDET.add(k);draw();return}
     if(e.target.closest('[data-aopen]')){const k=e.target.closest('[data-aopen]').dataset.aopen;SAOPEN.has(k)?SAOPEN.delete(k):SAOPEN.add(k);draw();return}
     if(e.target.closest('[data-sopen]')){SOPEN.has(key)?SOPEN.delete(key):SOPEN.add(key);draw();return}
     const t=e.target.closest('[data-tol]');if(t){SCOND.tol=+t.dataset.tol}
