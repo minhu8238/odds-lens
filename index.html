@@ -35,7 +35,9 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .rmeta .stale{color:var(--brick)}
 .rswitch{display:flex;gap:6px;margin-top:14px}
 .actions{display:flex;gap:8px;margin-top:12px}.act{flex:1;text-align:center;padding:9px 0;border-radius:var(--r-md);font-size:14px;font-weight:600;background:var(--surface);border:1px solid var(--line);color:var(--ink);text-decoration:none}
-.act:active{opacity:.7}.actnote{font-size:12px;color:var(--mute);margin-top:6px;min-height:0}
+.act:active{opacity:.7}.tokbox{margin-top:10px;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);padding:12px 14px;font-size:13px;color:var(--ink2)}.tokbox ol{margin:6px 0 10px;padding-left:18px;line-height:1.6}.tokbox a{color:var(--felt)}
+.tokbox input{width:100%;padding:10px;border-radius:var(--r-sm);border:1px solid var(--line);background:var(--sunk);color:var(--ink);font:inherit;font-size:14px}.tokrow{display:flex;gap:8px;margin-top:8px}
+.actnote{font-size:12px;color:var(--mute);margin-top:6px;min-height:0}
 .rswitch button{padding:6px 12px;border-radius:999px;font-size:13px;color:var(--mute);border:1px solid var(--line)}
 .rswitch button[aria-pressed=true]{background:var(--ink);color:var(--paper);border-color:var(--ink);font-weight:600}
 
@@ -143,7 +145,20 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
     <div class="brand">ODDS LENS</div>
     <div class="round"><div class="rtitle" id="rtitle">—</div><div class="rmeta" id="rmeta">불러오는 중</div></div>
     <div class="rswitch" id="rswitch"></div>
-    <div class="actions"><button class="act" id="btnReload">새로고침</button><a class="act" id="btnRun" href="https://github.com/minhu8238/odds-lens/actions/workflows/scrape.yml" target="_blank" rel="noopener">배트맨에서 지금 받기</a></div>
+    <div class="actions"><button class="act" id="btnReload">새로고침</button><button class="act" id="btnRun">배트맨에서 지금 받기</button></div>
+    <div class="tokbox" id="tokbox" hidden>
+      <b>처음 한 번만 설정해요</b>
+      <ol>
+        <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub 토큰 만들기</a>를 열어요.</li>
+        <li>Token name은 아무거나, Expiration은 원하는 기간으로 정해요.</li>
+        <li>Repository access에서 <b>Only select repositories → odds-lens</b>를 골라요.</li>
+        <li>Permissions의 Repository permissions에서 <b>Actions → Read and write</b>로 바꿔요.</li>
+        <li>Generate token을 누르고 나온 토큰(github_pat_로 시작)을 복사해 아래에 붙여넣어요.</li>
+      </ol>
+      <input id="tokin" type="password" placeholder="github_pat_..." autocomplete="off">
+      <div class="tokrow"><button class="act" id="toksave">저장하고 지금 받기</button><button class="act" id="tokcancel">취소</button></div>
+      <div class="actnote">토큰은 이 폰의 브라우저에만 저장되고 저장소나 다른 곳에는 올라가지 않아요. 이 토큰으로는 odds-lens의 자동 수집 실행만 할 수 있어요.</div>
+    </div>
     <div class="actnote" id="actnote"></div>
   </div>
   <div class="filters" id="filters">
@@ -421,7 +436,28 @@ document.getElementById('brief').addEventListener('click',e=>{const b=e.target.c
 const fl=document.getElementById('filters');new IntersectionObserver(([e])=>fl.classList.toggle('stuck',e.intersectionRatio<1),{threshold:[1],rootMargin:'-1px 0px 0px 0px'}).observe(fl);
 document.getElementById('btnReload').onclick=async e=>{const b=e.target;b.textContent='불러오는 중…';const before=DATA&&DATA.updated;await load();b.textContent='새로고침';
   document.getElementById('actnote').textContent=DATA&&DATA.updated!==before?'새 데이터를 불러왔어요.':`이미 최신이에요. 배트맨 수집 시각: ${DATA?ago(DATA.updated):'-'}`};
-document.getElementById('btnRun').onclick=()=>{document.getElementById('actnote').textContent='GitHub에서 "Run workflow" → 초록 버튼을 누르면 1~2분 뒤 새 배당이 들어와요. 그다음 여기서 새로고침을 누르세요.'};
+// 지금 받기: 이 폰에 저장한 GitHub 토큰(odds-lens Actions 실행 권한만)으로 자동 수집을 바로 실행
+const REPO='minhu8238/odds-lens',TK='lens.ghtoken';
+const note=t=>document.getElementById('actnote').textContent=t;
+async function runNow(){
+  const tok=store.get(TK,'');if(!tok){document.getElementById('tokbox').hidden=false;return}
+  const btn=document.getElementById('btnRun');btn.disabled=true;btn.textContent='요청 중…';
+  try{
+    const r=await fetch(`https://api.github.com/repos/${REPO}/actions/workflows/scrape.yml/dispatches`,{method:'POST',headers:{'Authorization':'Bearer '+tok,'Accept':'application/vnd.github+json','Content-Type':'application/json'},body:JSON.stringify({ref:'main'})});
+    if(r.status===401||r.status===403||r.status===404){store.set(TK,'');note('토큰이 맞지 않거나 권한이 없어요. 다시 설정해 주세요.');document.getElementById('tokbox').hidden=false;return}
+    if(r.status!==204){note('실행 요청이 실패했어요 ('+r.status+'). 잠시 뒤 다시 눌러 주세요.');return}
+    const before=DATA?DATA.updated:0,start=Date.now();btn.textContent='받는 중…';
+    note('배트맨에서 받아오는 중이에요. 보통 1~3분 걸려요.');
+    while(Date.now()-start<5*60000){await new Promise(s=>setTimeout(s,15000));await load();
+      if(DATA&&DATA.updated!==before){note('새 데이터를 받았어요.');return}
+      note(`배트맨에서 받아오는 중이에요… ${Math.round((Date.now()-start)/1000)}초`)}
+    note('아직 새 데이터가 안 들어왔어요. 배트맨 접속이 잠시 안 될 때가 있어요. 조금 뒤 새로고침해 보세요.');
+  }catch(e){note('요청을 보내지 못했어요. 인터넷 연결을 확인해 주세요.')}
+  finally{btn.disabled=false;btn.textContent='배트맨에서 지금 받기'}}
+document.getElementById('btnRun').onclick=runNow;
+document.getElementById('toksave').onclick=()=>{const v=document.getElementById('tokin').value.trim();if(!/^(github_pat_|ghp_)/.test(v)){note('github_pat_로 시작하는 토큰을 붙여넣어 주세요.');return}
+  store.set(TK,v);document.getElementById('tokin').value='';document.getElementById('tokbox').hidden=true;runNow()};
+document.getElementById('tokcancel').onclick=()=>{document.getElementById('tokbox').hidden=true};
 load();setInterval(load,120000);setInterval(()=>{if(DATA)draw()},60000);
 </script>
 </body>
