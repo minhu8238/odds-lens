@@ -436,7 +436,10 @@ function mVerdict(g,sources){const c=[];let pend=false,mt=0;
   const other=c.find(q=>q.x.j!==best.x.j);return {g,best,other,sc:best.sc,grade:GRADE(best.x)}}
 function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
   const out=[mVerdict(N,[{A:SALL1[N.s],m:'N',name:'일반 단독'},...ps.map(p=>({A:SALL[p.key],m:'N',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'}))])];
-  for(const p of ps)out.push(mVerdict(p.H,[{A:SALL1[p.H.s],m:'N',name:SGLN(p.H)},{A:SALL[p.key],m:'H',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'}]));
+  for(const p of ps){const srcS={A:SALL1[p.H.s],m:'N',name:SGLN(p.H)},srcP={A:SALL[p.key],m:'H',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'};
+    // 농구·배구 언더오버는 언오 단독 시장을 우선: 단독에서 기운 쪽이 있으면 그걸로, 없을 때만 짝 분석
+    if(isOU(p.H)&&/농구|배구/.test(p.H.sp||N.sp)){const v=mVerdict(p.H,[srcS]);out.push(v.none&&!v.pend?Object.assign(mVerdict(p.H,[srcP]),{fb:1}):Object.assign(v,{ouS:1}))}
+    else out.push(mVerdict(p.H,[srcS,srcP]))}
   return out}
 const VMK=g=>MKIND(g)==='normal'?'일반':MKN(isOU(g))+' '+LNS(g);
 function vLine(v){if(v.none)return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:var(--mute)">${v.pend?'분석 중…':'뚜렷한 쪽 없음'}</b>${v.pend?'':'<small>비슷한 과거 경기 결과가 배당 확률과 거의 같거나, 4경기 이상 남는 조건이 없어요</small>'}</span></div>`;
