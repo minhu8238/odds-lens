@@ -124,7 +124,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .cres{padding:8px 12px 10px}.chead{font-size:14px}.chead small{display:block;color:var(--mute);font-size:11px}
 .tally{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:13px}.tally b{font-weight:700}.tally small{color:var(--mute)}
 .allc{margin:8px 0 4px;padding:8px 0 2px;border-top:1px solid var(--line)}.arow{display:grid;grid-template-columns:34px 54px 1fr;gap:8px;align-items:center;font-size:12px;margin-top:5px}.arow .al{font-weight:700}.arow .ab{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.arow .ab i{display:block;height:100%;background:var(--mute)}.arow.c .ab i{background:var(--felt)}.arow.x .ab i{background:var(--brick)}.arow .av small{display:block;color:var(--faint)}.atbl{overflow-x:auto;margin-top:6px}.atbl table{border-collapse:collapse;font-size:11px;width:100%}.atbl td,.atbl th{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.atbl td:first-child,.atbl th:first-child{text-align:left;white-space:normal}.atbl .pos{color:var(--felt);font-weight:700}.atbl .neg{color:var(--brick)}
-.concl .ph small{color:var(--faint);font-weight:400;margin-left:6px}.vrow{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.vrow:first-of-type{border-top:0}.vm{color:var(--mute);font-weight:600}.vb b{font-size:15px}.vb small{display:block;color:var(--faint);font-size:12px;margin-top:2px}.vb .vwarn{color:var(--amber)}.vb .vchg{color:var(--brick)}.vres{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:2px}.vres.ok{background:#e3efe7;color:var(--felt)}.vres.no{background:#f5e3e0;color:var(--brick)}
+.concl .ph small{color:var(--faint);font-weight:400;margin-left:6px}.vrow{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.vrow:first-of-type{border-top:0}.vm{color:var(--mute);font-weight:600}.vb b{font-size:15px}.vb small{display:block;color:var(--faint);font-size:12px;margin-top:2px}.vb .vwarn{color:var(--amber)}.vb .vchg{color:var(--brick)}.vb .vsub{color:var(--mute)}.vres{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:2px}.vres.ok{background:#e3efe7;color:var(--felt)}.vres.no{background:#f5e3e0;color:var(--brick)}
 .clist{margin-top:8px}.crow{background:var(--surface);border-radius:var(--r-sm);padding:7px 9px;margin-top:6px;font-size:12px}
 .c1{color:var(--ink2);line-height:1.35}.c1 b{color:var(--ink);font-weight:600}.cd{color:var(--mute)}
 .c2{display:grid;grid-template-columns:minmax(30px,max-content) 1fr auto 40px;gap:6px;align-items:center;margin-top:3px}
@@ -171,7 +171,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
-  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-25 23:08 · 모든 종목 일반·핸디는 일반+핸디 짝 우선</div>
+  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-25 23:20 · 메인 근거 + 보조 근거(한 단계 낮게) 같이 반영</div>
     배트맨 공식 데이터를 받아와 시트 방식으로 자동 분석해요. 직전 회차까지의 일반+핸디 과거 경기에서 조건이 같은 경기를 찾고, 30경기 미만이면 <b>적음</b>을 붙여요. 시장 줄을 누르면 배당 흐름이 열려요.
   </div>
 </div>
@@ -450,16 +450,24 @@ function mVerdict(g,sources){const v=mVerdict0(g,sources);if(v.pend)return v;con
   if(!v.none&&v.grade[0]!=='약함'&&v.best.x.j!==nb.sd.j)return Object.assign(v,{narrowOther:nb});
   const x={lab:nb.lab,j:nb.sd.j,wact:100,wexp:nb.sd.exp,wres:100-nb.sd.exp,med:nb.n,max:nb.n,tot:1,pos:1,big:{n:nb.n,s:nb.sd}};
   return {g,best:{x,name:nb.name},narrow:nb,other:v.none?null:{x:v.best.x,name:v.best.name},sc:0,pend:false,grade:['보통','var(--amber)']}}
+// 메인 근거 + 보조 근거를 같이 반영: 보조는 한 단계 낮게 쳐서 비교 (메인이 기준, 보조도 무시하지 않음)
+const GR=[['약함','var(--mute)'],['보통','var(--amber)'],['강함','var(--felt)']],RK=v=>v.none?-1:GRANK(v.grade);
+function combineV(g,prim,rest){const m=mVerdict(g,prim),b=mVerdict(g,rest);if(m.pend||b.pend)return Object.assign(m,{pend:true});
+  const rm=RK(m),rb=RK(b)-1;
+  if(m.none&&b.none)return m;
+  if(!m.none&&!b.none&&m.best.x.j===b.best.x.j){const r=Math.max(rm,rb);return Object.assign(m,{grade:GR[r],sub:b,subAgree:1})}
+  if(b.none||rm>=rb)return Object.assign(m,{sub:b.none?null:b,subAgree:0});
+  if(rb<0)return m.none?m:Object.assign(m,{sub:b});
+  return Object.assign(b,{grade:GR[rb],main:m.none?null:m,fromSub:1})}
 function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
-  const bk=true,pnm=p=>'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝';
-  // 모든 종목: 일반은 일반+핸디 짝을 우선(주류), 짝에서 기운 쪽이 없을 때만 단독·언오 짝
-  const nAll=[{A:SALL1[N.s],m:'N',name:'일반 단독'},...ps.map(p=>({A:SALL[p.key],m:'N',name:pnm(p)}))];
-  const pri=(prim,rest,g)=>{const v=mVerdict(g,prim);return v.none&&!v.pend?Object.assign(mVerdict(g,rest),{fb:1}):v};
-  const out=[bk?pri(ps.filter(p=>!isOU(p.H)).map(p=>({A:SALL[p.key],m:'N',name:pnm(p)})),nAll,N):mVerdict(N,nAll)];
-  for(const p of ps){const srcS={A:SALL1[p.H.s],m:'N',name:SGLN(p.H)},srcP={A:SALL[p.key],m:'H',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'};
-    // 농구·배구 언더오버는 언오 단독 시장을 우선: 단독에서 기운 쪽이 있으면 그걸로, 없을 때만 짝 분석
-    if(isOU(p.H)&&/농구|배구/.test(p.H.sp||N.sp)){const v=mVerdict(p.H,[srcS]);out.push(v.none&&!v.pend?Object.assign(mVerdict(p.H,[srcP]),{fb:1}):Object.assign(v,{ouS:1}))}
-    else if(bk&&!isOU(p.H))out.push(pri([srcP],[srcS],p.H)); // 모든 종목: 핸디는 일반+핸디 짝 우선
+  const pnm=p=>'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝';
+  // 일반: 메인 = 일반+핸디 짝, 보조 = 일반 단독·일반+언오 짝
+  const nMain=ps.filter(p=>!isOU(p.H)).map(p=>({A:SALL[p.key],m:'N',name:pnm(p)})),nSub=[{A:SALL1[N.s],m:'N',name:'일반 단독'},...ps.filter(p=>isOU(p.H)).map(p=>({A:SALL[p.key],m:'N',name:pnm(p)}))];
+  const out=[nMain.length?combineV(N,nMain,nSub):mVerdict(N,nSub)];
+  for(const p of ps){const srcS={A:SALL1[p.H.s],m:'N',name:SGLN(p.H)},srcP={A:SALL[p.key],m:'H',name:pnm(p)};
+    // 농구·배구 언오: 메인 = 언오 단독, 보조 = 일반+언오 짝 / 핸디: 메인 = 일반+핸디 짝, 보조 = 핸디 단독 / 그 외 언오: 둘 다 같은 무게
+    if(isOU(p.H)&&/농구|배구/.test(p.H.sp||N.sp))out.push(combineV(p.H,[srcS],[srcP]));
+    else if(!isOU(p.H))out.push(combineV(p.H,[srcP],[srcS]));
     else out.push(mVerdict(p.H,[srcS,srcP]))}
   return out}
 const VMK=g=>MKIND(g)==='normal'?'일반':MKN(isOU(g))+' '+LNS(g);
@@ -474,7 +482,7 @@ function vHist(v){if(v.pend)return '';const k=v.g.s+'',cur=v.none?'없음':v.bes
   return note}
 function vLine(v){if(v.none)return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:var(--mute)">${v.pend?'분석 중…':'뚜렷한 쪽 없음'}</b>${v.pend?'':'<small>비슷한 과거 경기 결과가 배당 확률과 거의 같거나, 4경기 이상 남는 조건이 없어요</small>'}${vHist(v)}</span></div>`;
   const x=v.best.x,rr=['0','1','2'].includes(String(v.g.res))?+v.g.res:-1,done=rr>=0,hit=rr===x.j;
-  return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}${v.grade[0]==='약함'?' (살짝 이쪽)':''}</b>${done?`<span class="vres ${hit?'ok':'no'}">${hit?'맞음':'틀림'}</span>`:''}<small>비슷한 과거 경기에서 ${x.wact.toFixed(0)}% 나옴 (배당상 ${x.wexp.toFixed(0)}%) · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small>${x.big?`<small>가장 넓게 보면 ${x.big.n}경기 중 ${x.big.s.k}번 (${x.big.s.act.toFixed(0)}%, 배당상 ${x.big.s.exp.toFixed(0)}%)${x.med<10?` · 조건을 좁힌 조합은 대부분 ${x.med}경기 안팎이라 덜 믿어요`:''}</small>`:''}<small>근거: ${v.narrow?`${v.best.name} 가장 좁힌 조건(${v.narrow.clab})에서 ${v.narrow.n}경기 전부`:`${v.best.name}, ${AGREE(x)}`}</small>${v.narrowOther?`<small class="vwarn">가장 좁힌 조건(${v.narrowOther.clab})에서는 ${v.narrowOther.n}경기 전부 ${v.narrowOther.lab}였어요</small>`:''}${vHist(v)}${v.other?`<small class="vwarn">${v.other.name}은 ${v.other.x.lab} 쪽이었지만 표본 ${v.other.x.med}~${v.other.x.max}경기로 근거가 더 약해요</small>`:''}</span></div>`}
+  return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}${v.grade[0]==='약함'?' (살짝 이쪽)':''}</b>${done?`<span class="vres ${hit?'ok':'no'}">${hit?'맞음':'틀림'}</span>`:''}<small>비슷한 과거 경기에서 ${x.wact.toFixed(0)}% 나옴 (배당상 ${x.wexp.toFixed(0)}%) · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small>${x.big?`<small>가장 넓게 보면 ${x.big.n}경기 중 ${x.big.s.k}번 (${x.big.s.act.toFixed(0)}%, 배당상 ${x.big.s.exp.toFixed(0)}%)${x.med<10?` · 조건을 좁힌 조합은 대부분 ${x.med}경기 안팎이라 덜 믿어요`:''}</small>`:''}<small>근거: ${v.narrow?`${v.best.name} 가장 좁힌 조건(${v.narrow.clab})에서 ${v.narrow.n}경기 전부`:`${v.best.name}, ${AGREE(x)}`}</small>${v.narrowOther?`<small class="vwarn">가장 좁힌 조건(${v.narrowOther.clab})에서는 ${v.narrowOther.n}경기 전부 ${v.narrowOther.lab}였어요</small>`:''}${vHist(v)}${v.sub?`<small class="vsub">보조 근거 ${v.sub.best.name}: ${v.sub.best.x.lab} ${v.sub.grade[0]} (${v.sub.best.x.wact.toFixed(0)}%, 배당상 ${v.sub.best.x.wexp.toFixed(0)}%, 표본 ${v.sub.best.x.med}~${v.sub.best.x.max}경기)${v.subAgree?' → 같은 쪽이라 반영':' → 반대쪽이라 메인 유지'}</small>`:''}${v.fromSub?`<small class="vsub">메인 근거${v.main?` ${v.main.best.name}은 ${v.main.best.x.lab} ${v.main.grade[0]}`:'에서 뚜렷한 쪽이 없고'}, 보조 근거가 더 강해서 한 단계 낮춰 반영</small>`:''}${v.other?`<small class="vwarn">${v.other.name}은 ${v.other.x.lab} 쪽이었지만 표본 ${v.other.x.med}~${v.other.x.max}경기로 근거가 더 약해요</small>`:''}</span></div>`}
 const SDET=new Set();
 function sheetBox(m){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)return '';
   const Hs=m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(x=>x.g),dk=String(nrow.g.s),dop=SDET.has(dk);
