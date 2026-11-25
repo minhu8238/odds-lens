@@ -165,13 +165,12 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   <div class="filters" id="filters">
     <button class="chip" data-sp="">전체</button><button class="chip" data-sp="축구">축구</button><button class="chip" data-sp="농구">농구</button><button class="chip" data-sp="야구">야구</button><button class="chip" data-sp="배구">배구</button>
     <span class="sep"></span>
-    <button class="chip" data-t="only">판정 있는 경기</button><button class="chip" data-t="moved">배당 움직인 경기</button><button class="chip" data-t="past">끝난 경기 보기</button>
+    <button class="chip" data-t="only">시트 결과 있는 경기</button><button class="chip" data-t="moved">배당 움직인 경기</button><button class="chip" data-t="past">끝난 경기 보기</button>
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
   <div class="foot">
-    배트맨 공식 데이터를 받아와 ODDS ATLAS 규칙으로 자동 분석해요. 시장 줄을 누르면 배당 흐름과 ATLAS 결과, 비슷한 과거 경기 목록이 열려요.<br>
-    <b>후보</b> 과거 결과가 전체와 경기가 있는 기간 모두 기대보다 좋고 오즈 판단 신호(배당 내려감 + 구매율이 배당 확률보다 5%p 이상 낮음)까지 같은 방향 · <b>좋음</b> 두 기간 모두 기대보다 좋음 · <b>피하기</b> 두 기간 모두 기대보다 나쁨 또는 대중 추격 신호 · <b>패스</b> 그 외. 표본 수와 상관없이 같은 기준으로 판정하고 30경기 미만이면 <b>적음</b>을 붙여요.
+    배트맨 공식 데이터를 받아와 시트 방식으로 자동 분석해요. 직전 회차까지의 일반+핸디 과거 경기에서 조건이 같은 경기를 찾고, 30경기 미만이면 <b>적음</b>을 붙여요. 시장 줄을 누르면 배당 흐름이 열려요.
   </div>
 </div>
 <script>
@@ -228,7 +227,7 @@ const MORDER=g=>(/전반|후반/.test(g.bn||'')?10:0)+(/승무패|^일반 승패
 
 async function load(){
   try{const r=await fetch('data/latest.json?'+Date.now());if(!r.ok)throw new Error(r.status);DATA=await r.json();
-    try{const a=await fetch('data/analysis.json?'+Date.now());if(a.ok){const j=await a.json();AN=j.method==='atlas'?(j.games||{}):{}}else AN={}}catch(e){AN={}}
+    AN={}
     if(RI>=DATA.rounds.length)RI=0;draw()}
   catch(e){document.getElementById('rmeta').textContent='데이터를 받지 못했어요';document.getElementById('list').innerHTML='<div class="empty">자동 수집이 아직 돌지 않았거나 연결이 끊겼어요. 잠시 뒤 새로고침해 주세요.</div>'}}
 
@@ -247,7 +246,7 @@ function draw(){
   const M=new Map();for(const x of rows){const k=x.g.t+'|'+x.g.h+'|'+x.g.a;if(!M.has(k))M.set(k,{t:x.g.t,h:x.g.h,a:x.g.a,lg:x.g.lg,sp:x.g.sp,list:[]});M.get(k).list.push(x)}
   let matches=[...M.values()].map(m=>{m.list.sort((p,q)=>MORDER(p.g)-MORDER(q.g));m.cls=m.list.some(x=>x.a.cls==='c')?'c':m.list.some(x=>x.a.cls==='w')?'w':m.list.some(x=>x.a.cls==='x')?'x':'';m.moved=m.list.some(x=>x.g.c>0);m.past=m.t<=now;const sc=m.list.find(x=>x.g.sc&&x.g.res!=null);m.score=sc?sc.g.sc:'';return m}).sort((p,q)=>p.t-q.t);
   drawBrief(rows,R,now);
-  const vis=matches.filter(m=>(!F.sp||m.sp===F.sp)&&(!F.only||m.cls)&&(!F.moved||m.moved)&&(F.past||!m.past));
+  const vis=matches.filter(m=>(!F.sp||m.sp===F.sp)&&(!F.only||m.list.some(x=>Object.keys(SRES).some(k=>k.startsWith(x.g.s+':')&&SRES[k].n>0)))&&(!F.moved||m.moved)&&(F.past||!m.past));
   let h='',lastSlot='';
   for(const m of vis){const slot=dayKey(m.t)+' '+hhmm(m.t);if(slot!==lastSlot){h+=`<div class="slot"><b>${hhmm(m.t)}</b><span>${dayKey(m.t)}${m.past?' · 시작함':''}</span></div>`;lastSlot=slot}
     h+=matchHTML(m)}
@@ -373,15 +372,10 @@ function drawBrief(rows,R,now){
   let h=`<h2>시트 방식 자동 분석</h2><div class="counts"><span><b>${sp.length}</b>경기</span><span style="flex:1"></span></div><div class="none" style="font-size:12px;padding:2px 0 4px">기본 순서: 일반·핸디 최종 승·패 배당 ±${SCOND.tol.toFixed(2)} (핸디 기준점 같음) → 일반·핸디 변경 유무 → ${SAUTO}경기 이상 남으면 변경 횟수까지. 구매율은 경기 블록에서 켜서 비교할 수 있어요. 경기 블록에서 조건을 바꾸면 전체에 같이 적용돼요.</div>`;
   h+=sp.length?sp.slice(0,15).map(({pr,r})=>{const b=r.best,g=b.m==='N'?pr.N:pr.H,lab=(b.m==='N'?NLAB(r.n3):HLAB(r.h3))[b.s.j];
     return `<button class="pick" data-s="${pr.N.s}"><span class="t">${hhmm(pr.N.t)}</span><span class="m">${esc(pr.N.h)}<small>${esc(pr.N.a)} 상대, ${esc(pr.N.lg||'')} 핸디 ${pr.H.ln}</small></span><span class="s"><b style="color:var(--felt)">${lab} ${g.o[b.s.j].toFixed(2)}</b><small>${r.n}경기${r.n<30?' <span class="few">적음</span>':''} ${b.s.act.toFixed(0)}% (기대 ${b.s.exp.toFixed(0)}%)</small><small>수익 ${b.s.roi>0?'+':''}${b.s.roi.toFixed(0)}%</small></span></button>`}).join(''):`<div class="none">${SKEY?'조건에 맞는 경기가 없어요.':'과거 경기를 찾는 중이에요…'}</div>`;
-  h+=`<h2 style="margin-top:22px">ODDS ATLAS 자동 분석</h2><div class="counts"><span><b style="color:var(--felt)">${go.length}</b>후보</span><span><b style="color:var(--amber)">${good.length}</b>좋음</span><span><b style="color:var(--brick)">${no.length}</b>피하기</span><span><b>${up.length}</b>시장</span></div>`;
-  h+=`<h3>후보 · 과거 결과 좋음 + 오즈 판단 신호</h3>`+(go.length?go.slice(0,10).map(i=>line(i,'var(--felt)')).join(''):'<div class="none">지금은 후보가 없어요. 구매율이 쌓이면 오즈 판단 신호까지 확인해요.</div>');
-  h+=`<h3>좋음 · 두 기간 모두 기대보다 더 맞음</h3>`+(good.length?good.slice(0,10).map(i=>line(i,'var(--amber)')).join(''):'<div class="none">지금은 없어요.</div>');
-  if(no.length)h+=`<h3>피하기</h3>`+no.slice(0,6).map(i=>line(i,'var(--brick)')).join('');
-  h+=`<h3>최근 90분 배당 변동</h3>`;
+  h+=`<h3 style="margin-top:22px">최근 90분 배당 변동</h3>`;
   h+=moves.length?moves.map(x=>{const last=x.g.ch.length>1?x.g.ch[x.g.ch.length-2]:null;const prev=last?(x.a.three?[last[1],last[2],last[3]]:[last[1],last[3]]):x.a.io;
     const mvs=x.a.fo.map((o,j)=>Math.abs(o-prev[j])>=.005?`${x.a.lab[j]} ${prev[j].toFixed(2)}→${o.toFixed(2)}`:'').filter(Boolean).join(', ');
     return `<button class="pick" data-s="${x.g.s}"><span class="t">${hhmm(dtmMs(x.g.lc))}</span><span class="m">${esc(x.g.h)}<small>${esc(x.g.a)} 상대, ${marketName(x.g)} ${mvs}</small></span><span class="s"><small>경기 ${hhmm(x.g.t)}</small></span></button>`}).join(''):'<div class="none">최근 90분 동안 바뀐 배당이 없어요.</div>';
-  h+=`<div class="none" style="font-size:12px;padding-top:10px">ATLAS 규칙: 같은 시장에서 초기+최종(내재확률 ±2%p, 2way ±1.5%p, 움직임 방향·변경 여부·기준점 같음) 또는 최종(±1%p)이 비슷한 과거 경기를 찾고, 구매율이 있으면 ±10%p(2way ±7%p)로 한 번 더 좁혀요. 표본 수와 상관없이 같은 기준으로 판정하고, 30경기 미만이면 '적음'을 붙여요. 직전 회차까지의 경기만 써요.</div>`;
   document.getElementById('brief').innerHTML=h;
 }
 // ── 비슷한 과거 경기 찾기 (엑셀 필터를 자동으로)
@@ -503,7 +497,6 @@ function atlasPanel(x){const at=x.a.at;if(!at)return '<h4>ODDS ATLAS</h4><div cl
   return h}
 function detHTML(x){
   const {g,a}=x;let h='<h4>배당 흐름</h4>'+flowSVG(g,a);
-  h+=atlasPanel(x);
   return h}
 document.getElementById('rswitch').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;RI=+b.dataset.i;draw()});
 document.getElementById('filters').addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;if(b.dataset.sp!==undefined)F.sp=b.dataset.sp;else F[b.dataset.t]=!F[b.dataset.t];store.set('lens.f2',F);draw()});
