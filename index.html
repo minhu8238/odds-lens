@@ -348,10 +348,11 @@ function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0,isO=i
   const vs=v=>v&&v.reduce((a,b)=>a+b,0)>50,hasV=vs(N.v);
   const list=sheetCombos(n3,h3,hasV).map(({c,lab})=>{const r=sheetFind(sub,N,H,c,round);return {lab,n:r.n,N:r.N,H:r.H}});
   const {sum,best}=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO));
-  return {list,sum,best,total:list.length,n3,h3,isO,N0:N,H0:H}}
+  const sum1=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO),1).sum;
+  return {list,sum,sum1,best,total:list.length,n3,h3,isO,N0:N,H0:H}}
 // 조건을 좁혀도 4경기 이상 남는 조합만 판정에 씀 (3경기 이하 조합은 목록에만 보임)
 const MINN=4;
-function sumOf(list,labOf){const sum=[];for(const m of ['N','H'])for(const s0 of list[0][m]){const cs=list.filter(x=>x.n>=MINN).map(x=>({n:x.n,s:x[m].find(q=>q.j===s0.j)}));
+function sumOf(list,labOf,minN){minN=minN||MINN;const sum=[];for(const m of ['N','H'])for(const s0 of list[0][m]){const cs=list.filter(x=>x.n>=minN).map(x=>({n:x.n,s:x[m].find(q=>q.j===s0.j)}));
     const ns=cs.map(x=>x.n).sort((a,b)=>a-b);
     sum.push({m,j:s0.j,lab:labOf(m)[s0.j],tot:cs.length,pos:cs.filter(x=>x.s.res>0).length,
       act:cs.length?cs.reduce((a,x)=>a+x.s.act,0)/cs.length:0,exp:cs.length?cs.reduce((a,x)=>a+x.s.exp,0)/cs.length:0,
@@ -380,7 +381,8 @@ function singleAll(rows,G,round){const t3=G.o[1]>0,hasL=MKIND(G)!=='normal',e=0.
     const n=out.length,side=js.map(j=>{let k=0,ex=0,ret=0;for(const x of out){const sm=js.reduce((a,q)=>a+1/x.f[q],0);ex+=1/x.f[j]/sm;if(x.r===j){k++;ret+=x.f[j]}}return {j,k,act:n?k/n*100:0,exp:n?ex/n*100:0,res:n?(k-ex)/n*100:0,roi:n?(ret/n-1)*100:0}});
     list.push({lab:[`±${tol.toFixed(2)}`,fin==='all'?'최종 전부':fin==='wl'?(t3?'최종 승패':'최종'):'',ini==='all'?'초기 전부':ini==='wl'?(t3?'초기 승패':'초기'):'',chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote?'구매율':'',li?'초기 기준점':''].filter(Boolean).join(' · '),n,N:side,H:[]})}
   const lab=MKIND(G)==='normal'?NLAB(t3):HLAB(t3,isOU(G));const {sum,best}=sumOf(list,()=>lab);
-  return {list,sum,best,total:list.length,single:1,G}}
+  const sum1=sumOf(list,()=>lab,1).sum;
+  return {list,sum,sum1,best,total:list.length,single:1,G}}
 async function computeAll(R){const key=R.gmTs+':'+DATA.updated;if(SAKEY===key)return;SAKEY=key;
   for(const pr of sheetPairs(R)){if(SAKEY!==key)return;let rows;try{rows=await loadPairs(PKEY(pr))}catch(e){continue}
     SALL[pr.key]=sheetAll(rows,pr.N,pr.H,R.gmTs);await new Promise(r=>setTimeout(r,0))}
@@ -426,7 +428,11 @@ const SGLN=g=>MKIND(g)==='normal'?'일반 단독':MKN(isOU(g))+' '+LNS(g)+' 단�
 // ── 결론: 짝·단독 분석을 모두 모아서 시장마다 한 쪽만 고름 (표본 크기로 보정한 차이가 가장 큰 쪽, 조건 70% 이상 같은 방향일 때만)
 function mVerdict(g,sources){const c=[];let pend=false,mt=0;
   for(const q of sources){if(!q.A){pend=true;continue}for(const x of q.A.sum){if(x.m!==q.m||!x.tot)continue;mt++;if(x.wres<=0||x.pos/x.tot<0.7)continue;c.push({x,sc:x.wres*x.med/(x.med+30),name:q.name})}}
-  c.sort((a,b)=>b.sc-a.sc);const best=c[0];if(!best)return {g,none:true,pend};
+  c.sort((a,b)=>b.sc-a.sc);let best=c[0];
+  if(!best){ // 4경기 이상 남는 조합이 없으면: 1~3경기 조합에서 100%로 같은 쪽이고 3경기짜리가 있으면 '보통', 아니면 '약함'
+    const d=[];for(const q of sources){if(!q.A||!q.A.sum1)continue;for(const x of q.A.sum1){if(x.m!==q.m||!x.tot||x.wres<=0||x.pos/x.tot<0.7)continue;d.push({x,sc:x.wres*x.max,name:q.name})}}
+    d.sort((a,b)=>b.sc-a.sc);best=d[0];if(!best)return {g,none:true,pend};
+    const full=best.x.wact>=99.5&&best.x.max>=3;return {g,best,other:d.find(q=>q.x.j!==best.x.j),sc:0,small:1,grade:full?['보통','var(--amber)']:['약함','var(--mute)']}}
   const other=c.find(q=>q.x.j!==best.x.j);return {g,best,other,sc:best.sc,grade:GRADE(best.x)}}
 function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
   const out=[mVerdict(N,[{A:SALL1[N.s],m:'N',name:'일반 단독'},...ps.map(p=>({A:SALL[p.key],m:'N',name:'일반+'+MKN(isOU(p.H))+' '+LNS(p.H)+' 짝'}))])];
@@ -466,7 +472,7 @@ function drawBrief(rows,R,now){
   const vs=[];for(const {N,Hs} of byN.values())for(const v of matchVerdicts(N,Hs))if(!v.none)vs.push({N,v});
   for(let i=vs.length-1;i>=0;i--)if(vs[i].v.grade[0]==='약함')vs.splice(i,1);
   vs.sort((a,b)=>(GRANK(b.v.grade)-GRANK(a.v.grade))||((b.v.best.x.max>=30)-(a.v.best.x.max>=30))||(b.v.best.x.wres-a.v.best.x.wres));
-  h+=`<h2>결론 모음</h2><div class="none" style="font-size:12.5px;padding:2px 0 4px;line-height:1.55">경기·시장마다 일반·핸디·언오 짝 분석과 단독 분석을 전부 돌려서 <b>더 좋은 쪽 하나만</b> 골랐어요. 분석끼리 엇갈리면 표본이 크고 차이가 큰 쪽을 따라요.<br><b style="color:var(--felt)">강함</b> 조건 95% 이상이 같은 쪽 + 배당보다 15%p 이상 더 나옴 · <b style="color:var(--amber)">보통</b> 80% 이상 + 8%p 이상 · 조건을 좁혀도 4경기 이상 남는 조합만 판정에 쓰고, 30경기 안 되면 <span class="few">적음</span></div>`;
+  h+=`<h2>결론 모음</h2><div class="none" style="font-size:12.5px;padding:2px 0 4px;line-height:1.55">경기·시장마다 일반·핸디·언오 짝 분석과 단독 분석을 전부 돌려서 <b>더 좋은 쪽 하나만</b> 골랐어요. 분석끼리 엇갈리면 표본이 크고 차이가 큰 쪽을 따라요.<br><b style="color:var(--felt)">강함</b> 조건 95% 이상이 같은 쪽 + 배당보다 15%p 이상 더 나옴 · <b style="color:var(--amber)">보통</b> 80% 이상 + 8%p 이상 · 조건을 좁혀도 4경기 이상 남는 조합으로 판정하고(그런 조합이 없을 때 3경기 100%는 보통), 30경기 안 되면 <span class="few">적음</span></div>`;
   h+=vs.length?vs.slice(0,20).map(({N,v})=>{const x=v.best.x;
     return `<button class="pick" data-s="${N.s}"><span class="t">${hhmm(N.t)}</span><span class="m">${esc(N.h)}<small>${esc(N.a)} 상대, ${esc(N.lg||'')} ${VMK(v.g)}</small></span><span class="s"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}</b><small>과거 ${x.wact.toFixed(0)}% 나옴 · 배당상 ${x.wexp.toFixed(0)}% (+${x.wres.toFixed(0)}%p)</small><small>표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small></span></button>`}).join(''):`<div class="none">${SAKEY?'지금은 뚜렷한 쪽이 있는 시장이 없거나, 아직 분석 중이에요.':'과거 경기를 찾는 중이에요…'}</div>`;
   h+=`<h3 style="margin-top:22px">최근 90분 배당 변동</h3>`;
