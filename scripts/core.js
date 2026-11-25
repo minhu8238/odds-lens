@@ -36,7 +36,8 @@ function shape(r, gmTs, saleStatus) {
       il: first && first.BCHG_W_HANDI_RT != null ? first.BCHG_W_HANDI_RT : g('winHandi'),
       o: [g('winAllot'), g('drawAllot'), g('loseAllot')],
       i: first ? [first.BCHG_W_ODDS / 100, first.BCHG_D_ODDS / 100, first.BCHG_L_ODDS / 100] : null,
-      c: H.length, lc: H.length ? H[H.length - 1].CHG_DTM.slice(0, 12) : null,
+      c: (hist[seq] || []).length, // 변경 횟수: 배당만 바뀐 것 + 기준점만 바뀐 것 모두 (과거 데이터와 같은 기준)
+      lc: H.length ? H[H.length - 1].CHG_DTM.slice(0, 12) : null,
       ch: H.map(t => [t.CHG_DTM.slice(0, 12), t.ACHG_W_ODDS / 100, t.ACHG_D_ODDS / 100, t.ACHG_L_ODDS / 100]),
       v: vote[seq] || null, res: g('gameResult'), sc: g('mchScore')
     };

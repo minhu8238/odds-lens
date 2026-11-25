@@ -370,10 +370,15 @@ function loadSingle(key){if(AH[key])return AH[key];AH[key]=(async()=>{const rows
   let idx={};try{idx=JSON.parse(await fetchText('data/history_new/index.json?'+Date.now()))}catch(e){}
   for(const rd of (idx['atlas_'+key]||[])){try{const t2=await fetchText(`data/history_new/${rd}/atlas_${key}.csv?`+Date.now());for(const l of t2.split('\n'))if(l){const x=P(rd,l);if(x)rows.push(x)}}catch(e){}}
   return rows})();AH[key].catch(()=>{delete AH[key]});return AH[key]}
-function singleAll(rows,G,round){const t3=G.o[1]>0,hasL=MKIND(G)!=='normal',e=0.1+1e-9,Gi=G.i&&G.i[0]>1?G.i:G.o,gil=G.il!=null?G.il:G.ln,mv=(G.c||0)>0;
+function singleAll(rows,G,round){const t3=G.o[1]>0,hasL=MKIND(G)!=='normal',lineOnly=hasL&&G.sp==='농구',e=0.1+1e-9,Gi=G.i&&G.i[0]>1?G.i:G.o,gil=G.il!=null?G.il:G.ln,mv=(G.c||0)>0;
   const V=G.v&&G.v.reduce((a,b)=>a+b,0)>50?G.v.map(x=>x/G.v.reduce((a,b)=>a+b,0)*100):null;
-  const pre=rows.filter(x=>(!x.rd||x.rd<round)&&((x.f[1]>1)===t3)&&(!hasL||x.ln===G.ln)&&((Math.abs(x.f[0]-G.o[0])<=e&&Math.abs(x.f[2]-G.o[2])<=e)||(Math.abs(x.i[0]-Gi[0])<=e&&Math.abs(x.i[2]-Gi[2])<=e)));
+  const pre=rows.filter(x=>(!x.rd||x.rd<round)&&((x.f[1]>1)===t3)&&(!hasL||x.ln===G.ln)&&(lineOnly&&x.il===gil||(Math.abs(x.f[0]-G.o[0])<=e&&Math.abs(x.f[2]-G.o[2])<=e)||(Math.abs(x.i[0]-Gi[0])<=e&&Math.abs(x.i[2]-Gi[2])<=e)));
   const js=t3?[0,1,2]:[0,2],vt=t3?10:7,list=[];
+  const side=out=>{const n=out.length;return js.map(j=>{let k=0,ex=0,ret=0;for(const x of out){const sm=js.reduce((a,q)=>a+1/x.f[q],0);ex+=1/x.f[j]/sm;if(x.r===j){k++;ret+=x.f[j]}}return {j,k,act:n?k/n*100:0,exp:n?ex/n*100:0,res:n?(k-ex)/n*100:0,roi:n?(ret/n-1)*100:0}})};
+  // 농구 핸디·언오: 배당 숫자 없이 '처음 기준점 → 최종 기준점'만 맞추는 조합도 (시트에서 기준점만 거는 방식)
+  if(lineOnly)for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0]){
+    const out=pre.filter(x=>x.il===gil&&(chg!=='mv'||(x.ch>0)===mv)&&(chg!=='cnt'||x.ch===(G.c||0))&&(!vote||js.every(j=>Math.abs(x.v[j]-V[j])<=vt)));
+    list.push({lab:['기준점만 '+gil+'→'+G.ln,chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote?'구매율':''].filter(Boolean).join(' · '),n:out.length,N:side(out),H:[]})}
   for(const tol of [0.03,0.06,0.1])for(const fin of t3?['wl','all']:['wl'])for(const ini of mv?(t3?['wl','all']:['wl']):(t3?['none','wl','all']:['none','wl']))for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of hasL?(G.sp==='농구'?[1]:[0,1]):[0]){
     if(fin==='none'&&ini==='none')continue;
     const T=tol+1e-9,fj=fin==='all'?js:fin==='wl'?[0,2]:[],ij=ini==='all'?js:ini==='wl'?[0,2]:[];
