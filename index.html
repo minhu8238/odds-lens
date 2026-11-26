@@ -124,7 +124,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
 .cres{padding:8px 12px 10px}.chead{font-size:14px}.chead small{display:block;color:var(--mute);font-size:11px}
 .tally{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;font-size:13px}.tally b{font-weight:700}.tally small{color:var(--mute)}
 .allc{margin:8px 0 4px;padding:8px 0 2px;border-top:1px solid var(--line)}.arow{display:grid;grid-template-columns:34px 54px 1fr;gap:8px;align-items:center;font-size:12px;margin-top:5px}.arow .al{font-weight:700}.arow .ab{height:6px;background:var(--line);border-radius:3px;overflow:hidden}.arow .ab i{display:block;height:100%;background:var(--mute)}.arow.c .ab i{background:var(--felt)}.arow.x .ab i{background:var(--brick)}.arow .av small{display:block;color:var(--faint)}.atbl{overflow-x:auto;margin-top:6px}.atbl table{border-collapse:collapse;font-size:11px;width:100%}.atbl td,.atbl th{padding:3px 5px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}.atbl td:first-child,.atbl th:first-child{text-align:left;white-space:normal}.atbl .pos{color:var(--felt);font-weight:700}.atbl .neg{color:var(--brick)}
-.concl .ph small{color:var(--faint);font-weight:400;margin-left:6px}.vrow{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.vrow:first-of-type{border-top:0}.vm{color:var(--mute);font-weight:600}.vb b{font-size:15px}.vb small{display:block;color:var(--faint);font-size:12px;margin-top:2px}.vb .vwarn{color:var(--amber)}.vb .vchg{color:var(--brick)}.vb .vsub{color:var(--mute)}.vres{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:2px}.vres.ok{background:#e3efe7;color:var(--felt)}.vres.no{background:#f5e3e0;color:var(--brick)}
+.concl .ph small{color:var(--faint);font-weight:400;margin-left:6px}.vrow{display:grid;grid-template-columns:72px 1fr;gap:8px;padding:7px 0;border-top:1px solid var(--line);font-size:13px}.vrow:first-of-type{border-top:0}.vm{color:var(--mute);font-weight:600}.vb b{font-size:15px}.vb small{display:block;color:var(--faint);font-size:12px;margin-top:2px}.vb .vwarn{color:var(--amber)}.vb .vchg{color:var(--brick)}.vb .vsub{color:var(--mute)}.pgrow{cursor:pointer}.pgt{color:var(--felt)!important;font-weight:600}.pglist{margin:2px 0 8px}.pgi{display:grid;grid-template-columns:44px 1fr auto auto;gap:8px;align-items:center;padding:7px 0;border-top:1px dashed var(--line);font-size:12.5px}.pgt2{color:var(--faint)}.pgm small,.pgp small{display:block;color:var(--faint);font-size:11px}.pgp{text-align:right;font-weight:600}.vres{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;padding:1px 7px;border-radius:9px;vertical-align:2px}.vres.ok{background:#e3efe7;color:var(--felt)}.vres.no{background:#f5e3e0;color:var(--brick)}
 .clist{margin-top:8px}.crow{background:var(--surface);border-radius:var(--r-sm);padding:7px 9px;margin-top:6px;font-size:12px}
 .c1{color:var(--ink2);line-height:1.35}.c1 b{color:var(--ink);font-weight:600}.cd{color:var(--mute)}
 .c2{display:grid;grid-template-columns:minmax(30px,max-content) 1fr auto 40px;gap:6px;align-items:center;margin-top:3px}
@@ -171,7 +171,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
-  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-26 11:20 · 시작한 경기는 '과거 결과 보기'로</div>
+  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-26 11:25 · 과거 결과에서 판정별 경기 목록</div>
     배트맨 공식 데이터를 받아와 시트 방식으로 자동 분석해요. 직전 회차까지의 일반+핸디 과거 경기에서 조건이 같은 경기를 찾고, 30경기 미만이면 <b>적음</b>을 붙여요. 시장 줄을 누르면 배당 흐름이 열려요.
   </div>
 </div>
@@ -257,13 +257,16 @@ function draw(){
 }
 
 // ── 과거 결과 보기: 시작한 경기만 모아 보여주고, 끝난 시장의 결론이 맞았는지 판정별로 집계
-function pastSummary(ms){const T={};let pend=0;
+const PSOPEN=new Set();
+function pastSummary(ms){const T={},L={};let pend=0;
   for(const m of ms){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)continue;
     const Hs=m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(x=>x.g);
     for(const v of matchVerdicts(nrow.g,Hs)){if(v.pend){pend++;continue}if(v.none)continue;const rr=['0','1','2'].includes(String(v.g.res))?+v.g.res:-1;if(rr<0)continue;
       const k=v.grade[0],t=T[k]||(T[k]={n:0,hit:0,exp:0,ret:0});const x=v.best.x,o=v.g.o,js=o[1]>0?[0,1,2]:[0,2],sm=js.reduce((a,q)=>a+1/o[q],0);
-      t.n++;t.exp+=1/o[x.j]/sm;if(rr===x.j){t.hit++;t.ret+=o[x.j]}}}
-  const row=k=>{const t=T[k];if(!t)return '';return `<div class="vrow"><span class="vm">${k}</span><span class="vb"><b>${t.hit}/${t.n} 맞음 (${(t.hit/t.n*100).toFixed(0)}%)</b><small>배당상 ${(t.exp/t.n*100).toFixed(0)}% · 결론대로 1씩 샀으면 수익 ${((t.ret/t.n-1)*100)>0?'+':''}${((t.ret/t.n-1)*100).toFixed(0)}%</small></span></div>`};
+      t.n++;t.exp+=1/o[x.j]/sm;if(rr===x.j){t.hit++;t.ret+=o[x.j]}(L[k]=L[k]||[]).push({m,v,x,hit:rr===x.j})}}
+  const row=k=>{const t=T[k];if(!t)return '';const op=PSOPEN.has(k);
+    return `<div class="vrow pgrow" data-pg="${k}"><span class="vm">${k}</span><span class="vb"><b>${t.hit}/${t.n} 맞음 (${(t.hit/t.n*100).toFixed(0)}%)</b><small>배당상 ${(t.exp/t.n*100).toFixed(0)}% · 결론대로 1씩 샀으면 수익 ${((t.ret/t.n-1)*100)>0?'+':''}${((t.ret/t.n-1)*100).toFixed(0)}%</small><small class="pgt">${op?'경기 목록 닫기 ▲':'어떤 경기였는지 보기 ▼'}</small></span></div>`+
+    (op?`<div class="pglist">${L[k].map(({m,v,x,hit})=>`<div class="pgi"><span class="pgt2">${hhmm(m.t)}</span><span class="pgm">${esc(m.h)} <small>vs ${esc(m.a)} · ${esc(m.lg||'')}</small></span><span class="pgp">${VMK(v.g)} ${x.lab} ${v.g.o[x.j].toFixed(2)}<small>${esc(m.score||'')}</small></span><span class="vres ${hit?'ok':'no'}">${hit?'맞음':'틀림'}</span></div>`).join('')}</div>`:'')};
   return `<div class="sbox concl" style="margin:0 0 14px"><div class="ph">과거 결과 <small>지금 회차에서 시작한 경기 ${ms.length}개 · 결과 나온 시장의 결론 적중</small></div>${['강함','보통','약함'].map(row).join('')||'<div class="none" style="font-size:12px">아직 결과가 나온 시장이 없어요.</div>'}${pend?'<div class="none" style="font-size:12px">분석 중인 시장이 있어요…</div>':''}</div>`}
 // ── 추천: 경기마다 기본 조건으로 자동 검색해서 결과별 '실제 비율 − 지금 배당 기대'를 계산
 // 최종 모드: ±0.06에서 5경기 미만이면 ±0.10, ±0.15로 넓힘. 무브 모드: 내재확률 ±3%p.
@@ -668,6 +671,7 @@ document.getElementById('list').addEventListener('click',e=>{
     return}
   const sb=e.target.closest('.sbox');
   if(sb){const key=sb.dataset.skey;
+    if(e.target.closest('[data-pg]')){const k=e.target.closest('[data-pg]').dataset.pg;PSOPEN.has(k)?PSOPEN.delete(k):PSOPEN.add(k);draw();return}
     if(e.target.closest('[data-sdet]')){const k=e.target.closest('[data-sdet]').dataset.sdet;SDET.has(k)?SDET.delete(k):SDET.add(k);draw();return}
     if(e.target.closest('[data-aopen]')){const k=e.target.closest('[data-aopen]').dataset.aopen;SAOPEN.has(k)?SAOPEN.delete(k):SAOPEN.add(k);draw();return}
     if(e.target.closest('[data-sopen]')){SOPEN.has(key)?SOPEN.delete(key):SOPEN.add(key);draw();return}
