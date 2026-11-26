@@ -171,7 +171,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
-  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-25 23:27 · 약함이 3%p 미만이면 뚜렷한 쪽 없음</div>
+  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-26 11:10 · 강함은 표본 8경기 이상만</div>
     배트맨 공식 데이터를 받아와 시트 방식으로 자동 분석해요. 직전 회차까지의 일반+핸디 과거 경기에서 조건이 같은 경기를 찾고, 30경기 미만이면 <b>적음</b>을 붙여요. 시장 줄을 누르면 배당 흐름이 열려요.
   </div>
 </div>
@@ -470,7 +470,9 @@ function matchVerdicts(N,Hs){const ps=Hs.map(H=>({H,key:N.s+':'+H.s}));
     else if(!isOU(p.H))out.push(combineV(p.H,[srcP],[srcS]));
     else out.push(mVerdict(p.H,[srcS,srcP]))}
   // 약함인데 배당보다 3%p도 차이 안 나면 '뚜렷한 쪽 없음'으로
-  return out.map(v=>!v.none&&!v.pend&&v.grade[0]==='약함'&&v.best.x.wres<3?{g:v.g,none:true,pend:false}:v)}
+  // 강함은 가장 넓은 조건 표본이 8경기 이상일 때만, 8경기 미만이면 보통으로
+  return out.map(v=>!v.none&&!v.pend&&v.grade[0]==='약함'&&v.best.x.wres<3?{g:v.g,none:true,pend:false}:v)
+    .map(v=>!v.none&&!v.pend&&v.grade[0]==='강함'&&v.best.x.max<8?Object.assign(v,{grade:GR[1],cut8:1}):v)}
 const VMK=g=>MKIND(g)==='normal'?'일반':MKN(isOU(g))+' '+LNS(g);
 // 판정 기록: 이 폰에서 전에 본 판정과 달라졌으면 무엇이 바뀌어서인지 표시
 const VH=store.get('lens.vh',{});let VHT=0;
@@ -483,7 +485,7 @@ function vHist(v){if(v.pend)return '';const k=v.g.s+'',cur=v.none?'없음':v.bes
   return note}
 function vLine(v){if(v.none)return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:var(--mute)">${v.pend?'분석 중…':'뚜렷한 쪽 없음'}</b>${v.pend?'':'<small>비슷한 과거 경기 결과가 배당 확률과 3%p도 차이 안 나거나, 4경기 이상 남는 조건이 없어요</small>'}${vHist(v)}</span></div>`;
   const x=v.best.x,rr=['0','1','2'].includes(String(v.g.res))?+v.g.res:-1,done=rr>=0,hit=rr===x.j;
-  return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}${v.grade[0]==='약함'?' (살짝 이쪽)':''}</b>${done?`<span class="vres ${hit?'ok':'no'}">${hit?'맞음':'틀림'}</span>`:''}<small>비슷한 과거 경기에서 ${x.wact.toFixed(0)}% 나옴 (배당상 ${x.wexp.toFixed(0)}%) · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small>${x.big?`<small>가장 넓게 보면 ${x.big.n}경기 중 ${x.big.s.k}번 (${x.big.s.act.toFixed(0)}%, 배당상 ${x.big.s.exp.toFixed(0)}%)${x.med<10?` · 조건을 좁힌 조합은 대부분 ${x.med}경기 안팎이라 덜 믿어요`:''}</small>`:''}<small>근거: ${v.narrow?`${v.best.name} 가장 좁힌 조건(${v.narrow.clab})에서 ${v.narrow.n}경기 전부`:`${v.best.name}, ${AGREE(x)}`}</small>${v.narrowOther?`<small class="vwarn">가장 좁힌 조건(${v.narrowOther.clab})에서는 ${v.narrowOther.n}경기 전부 ${v.narrowOther.lab}였어요</small>`:''}${vHist(v)}${v.sub?`<small class="vsub">보조 근거 ${v.sub.best.name}: ${v.sub.best.x.lab} ${v.sub.grade[0]} (${v.sub.best.x.wact.toFixed(0)}%, 배당상 ${v.sub.best.x.wexp.toFixed(0)}%, 표본 ${v.sub.best.x.med}~${v.sub.best.x.max}경기)${v.subAgree?' → 같은 쪽이라 반영':' → 반대쪽이라 메인 유지'}</small>`:''}${v.fromSub?`<small class="vsub">메인 근거${v.main?` ${v.main.best.name}은 ${v.main.best.x.lab} ${v.main.grade[0]}`:'에서 뚜렷한 쪽이 없고'}, 보조 근거가 더 강해서 한 단계 낮춰 반영</small>`:''}${v.other?`<small class="vwarn">${v.other.name}은 ${v.other.x.lab} 쪽이었지만 표본 ${v.other.x.med}~${v.other.x.max}경기로 근거가 더 약해요</small>`:''}</span></div>`}
+  return `<div class="vrow"><span class="vm">${VMK(v.g)}</span><span class="vb"><b style="color:${v.grade[1]}">${x.lab} ${v.g.o[x.j].toFixed(2)} · ${v.grade[0]}${v.grade[0]==='약함'?' (살짝 이쪽)':''}</b>${done?`<span class="vres ${hit?'ok':'no'}">${hit?'맞음':'틀림'}</span>`:''}<small>비슷한 과거 경기에서 ${x.wact.toFixed(0)}% 나옴 (배당상 ${x.wexp.toFixed(0)}%) · 표본 ${x.med}~${x.max}경기${x.max<30?' <span class="few">적음</span>':''}</small>${x.big?`<small>가장 넓게 보면 ${x.big.n}경기 중 ${x.big.s.k}번 (${x.big.s.act.toFixed(0)}%, 배당상 ${x.big.s.exp.toFixed(0)}%)${x.med<10?` · 조건을 좁힌 조합은 대부분 ${x.med}경기 안팎이라 덜 믿어요`:''}</small>`:''}${v.cut8?'<small class="vsub">표본이 8경기 미만이라 강함 → 보통</small>':''}<small>근거: ${v.narrow?`${v.best.name} 가장 좁힌 조건(${v.narrow.clab})에서 ${v.narrow.n}경기 전부`:`${v.best.name}, ${AGREE(x)}`}</small>${v.narrowOther?`<small class="vwarn">가장 좁힌 조건(${v.narrowOther.clab})에서는 ${v.narrowOther.n}경기 전부 ${v.narrowOther.lab}였어요</small>`:''}${vHist(v)}${v.sub?`<small class="vsub">보조 근거 ${v.sub.best.name}: ${v.sub.best.x.lab} ${v.sub.grade[0]} (${v.sub.best.x.wact.toFixed(0)}%, 배당상 ${v.sub.best.x.wexp.toFixed(0)}%, 표본 ${v.sub.best.x.med}~${v.sub.best.x.max}경기)${v.subAgree?' → 같은 쪽이라 반영':' → 반대쪽이라 메인 유지'}</small>`:''}${v.fromSub?`<small class="vsub">메인 근거${v.main?` ${v.main.best.name}은 ${v.main.best.x.lab} ${v.main.grade[0]}`:'에서 뚜렷한 쪽이 없고'}, 보조 근거가 더 강해서 한 단계 낮춰 반영</small>`:''}${v.other?`<small class="vwarn">${v.other.name}은 ${v.other.x.lab} 쪽이었지만 표본 ${v.other.x.med}~${v.other.x.max}경기로 근거가 더 약해요</small>`:''}</span></div>`}
 const SDET=new Set();
 function sheetBox(m){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)return '';
   const Hs=m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(x=>x.g),dk=String(nrow.g.s),dop=SDET.has(dk);
