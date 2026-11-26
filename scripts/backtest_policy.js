@@ -47,10 +47,13 @@ function singleAnalysis(A, Gm, isLine) {
 }
 // 판정 (페이지와 같은 규칙)
 const GRADE = b => { const sh = b.pos / b.tot; return sh >= 0.95 && b.wres >= 15 ? 2 : sh >= 0.8 && b.wres >= 8 ? 1 : 0 };
-function verdict(sums) { let best = null; for (const S of sums) for (const j in S) { const x = S[j]; if (x.wres <= 0 || x.pos / x.tot < 0.7) continue; const sc = x.wres * x.med / (x.med + 30); if (!best || sc > best.sc) best = { x, sc } } return best ? { j: best.x.j, g: GRADE(best.x), wres: best.x.wres } : null }
+function verdict(sums) { let best = null; for (const S of sums) for (const j in S) { const x = S[j]; if (x.wres <= 0 || x.pos / x.tot < 0.7) continue; const sc = x.wres * x.med / (x.med + 30); if (!best || sc > best.sc) best = { x, sc } } return best ? { j: best.x.j, g: GRADE(best.x) === 2 && best.x.max < 8 ? 1 : GRADE(best.x), wres: best.x.wres, max: best.x.max } : null }
 function combine(m, b) { const rm = m ? m.g : -1, rb = b ? b.g - 1 : -2; if (!m && !b) return null; if (m && b && m.j === b.j) return { j: m.j, g: Math.max(rm, rb), wres: m.wres }; if (!b || rm >= rb) return m; if (rb < 0) return m; return { j: b.j, g: rb, wres: b.wres } }
 const fin = v => v && !(v.g === 0 && v.wres < 3) ? v : null;
-const ST = {}; const rec = (pol, mk, v, odds, res) => { if (!v) return; const js = odds[1] > 1 ? js3 : wl, s = js.reduce((a, q) => a + 1 / odds[q], 0); for (const key of [pol + '|' + mk + '|' + ['약함', '보통', '강함'][v.g], pol + '|' + mk + '|보통이상'].filter(k => !k.endsWith('보통이상') || v.g >= 1)) { const t = ST[key] || (ST[key] = { n: 0, hit: 0, exp: 0, ret: 0 }); t.n++; t.exp += 1 / odds[v.j] / s; if (res === v.j) { t.hit++; t.ret += odds[v.j] } } };
+const ST = {}, OB = {};
+const bucket = o => o < 1.5 ? 'a 1.5미만' : o < 2.2 ? 'b 1.5~2.2' : o < 3 ? 'c 2.2~3.0' : 'd 3.0이상';
+const rec2 = (mk, v, odds, res) => { if (!v || v.g < 1) return; const js = odds[1] > 1 ? js3 : wl, s = js.reduce((a, q) => a + 1 / odds[q], 0), gn = ['약함', '보통', '강함'][v.g];
+  for (const key of [gn + '|' + bucket(odds[v.j]), gn + '|' + (odds[1] > 1 && v.j === 1 ? '무(핸무)' : '승패쪽'), '보통이상|' + bucket(odds[v.j])].concat(odds[v.j] >= 3 ? ['고배당|표본' + (v.max >= 50 ? '50+' : v.max >= 20 ? '20~49' : v.max >= 8 ? '8~19' : '<8') , '고배당|차이' + (v.wres >= 20 ? '20+' : v.wres >= 12 ? '12~19' : '<12'), '고배당|표본20+차이12+|' + (v.max >= 20 && v.wres >= 12 ? 'Y' : 'N')] : [])) { const t = OB[key] || (OB[key] = { n: 0, hit: 0, exp: 0, ret: 0 }); t.n++; t.exp += 1 / odds[v.j] / s; if (res === v.j) { t.hit++; t.ret += odds[v.j] } } }; const rec = (pol, mk, v, odds, res) => { if (!v) return; const js = odds[1] > 1 ? js3 : wl, s = js.reduce((a, q) => a + 1 / odds[q], 0); for (const key of [pol + '|' + mk + '|' + ['약함', '보통', '강함'][v.g], pol + '|' + mk + '|보통이상'].filter(k => !k.endsWith('보통이상') || v.g >= 1)) { const t = ST[key] || (ST[key] = { n: 0, hit: 0, exp: 0, ret: 0 }); t.n++; t.exp += 1 / odds[v.j] / s; if (res === v.j) { t.hit++; t.ret += odds[v.j] } } };
 const start = pairs.findIndex(x => x.dt >= from); let tested = 0; const t0 = Date.now();
 for (let ti = start; ti < pairs.length; ti++) {
   const G = pairs[ti]; const P = pairAnalysis(ti);
@@ -59,11 +62,11 @@ for (let ti = start; ti < pairs.length; ti++) {
   tested++;
   const pn = verdict([P.N]), sn = verdict([SN]), ph = verdict([P.H]), sh = verdict([SH]);
   for (const [mk, pv, sv, odds, res] of [['일반', pn, sn, G.nf, G.r1], ['핸디', ph, sh, G.hf, G.r2]]) {
-    rec('A 짝 메인', mk, fin(combine(pv, sv)), odds, res);
+    rec('A 짝 메인', mk, fin(combine(pv, sv)), odds, res); rec2(mk, fin(combine(pv, sv)), odds, res);
     rec('B 단독 메인', mk, fin(combine(sv, pv)), odds, res);
     rec('C 같은 무게', mk, fin(verdict(mk === '일반' ? [P.N, SN] : [P.H, SH])), odds, res);
   }
 }
-fs.writeFileSync(`/tmp/pol_${sp}.json`, JSON.stringify({ tested, ST }));
+fs.writeFileSync(`/tmp/pol_${sp}.json`, JSON.stringify({ tested, ST, OB }));
 console.log(sp, '시험 경기', tested, ((Date.now() - t0) / 1000).toFixed(0) + 's');
 for (const k of Object.keys(ST).sort()) { const s = ST[k]; console.log(k.padEnd(22), String(s.n).padStart(6), '적중', (s.hit / s.n * 100).toFixed(1) + '%', '배당상', (s.exp / s.n * 100).toFixed(1) + '%', '차이', ((s.hit - s.exp) / s.n * 100).toFixed(1) + '%p', '수익', ((s.ret / s.n - 1) * 100).toFixed(1) + '%', '±' + (196 * Math.sqrt(.25 / s.n)).toFixed(1)) }
