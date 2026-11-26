@@ -41,6 +41,7 @@ async function post(p, body) {
   const snap = await buildSnapshot(post);
   if (!snap.rounds.length) throw new Error('배당이 올라온 회차 없음');
   fs.writeFileSync(path.join(dataDir, 'latest.json'), JSON.stringify(snap));
+  try { const tk = snap._tooltipKeys; if (tk) fs.writeFileSync(path.join(dataDir, 'tooltip_keys.json'), JSON.stringify(tk)) } catch (e) { }
   // 시간대별 기록: 배당이 바뀌었거나 마지막 기록이 60분 넘었으면 [시각, 배당3, 구매건수3] 추가
   for (const r of snap.rounds) {
     const f = path.join(histDir, `${r.gmTs}.json`);

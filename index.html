@@ -171,7 +171,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
-  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-26 11:25 · 과거 결과에서 판정별 경기 목록</div>
+  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-26 11:35 · 배당 흐름에 기준점 변경 표시</div>
     배트맨 공식 데이터를 받아와 시트 방식으로 자동 분석해요. 직전 회차까지의 일반+핸디 과거 경기에서 조건이 같은 경기를 찾고, 30경기 미만이면 <b>적음</b>을 붙여요. 시장 줄을 누르면 배당 흐름이 열려요.
   </div>
 </div>
@@ -615,14 +615,17 @@ function matchHTML(m){
 const isExtra=x=>!x.a.cls&&x.a.cls!==''&&(/홀짝/.test(x.g.ty)||/전반|후반/.test(x.g.bn||'')||/승N패|승\d패/.test(x.g.ty))||(x.a.cls==='n'&&(/홀짝/.test(x.g.ty)||/전반|후반/.test(x.g.bn||'')));
 function rowHTML(x,m,extra){
   const {g,a}=x,k=a.fo.length;
-  const line=(a.isH||a.isO)&&g.ln!==0?`<small>${a.isH&&g.ln>0?'+':''}${g.ln}</small>`:'';
+  const fl=v=>`${a.isH&&v>0?'+':''}${v}`,line=(a.isH||a.isO)&&g.ln!==0?`<small>${g.il!=null&&g.il!==g.ln?`<s style="opacity:.6">${fl(g.il)}</s> → `:''}${fl(g.ln)}</small>`:'';
   const vlab=a.best>=0?`<span class="verdict ${a.cls}">${a.lab[a.best]} ${VDL[a.vd[a.best].vd]}${a.vd[a.best].s.n<30?' · 적음':''}</span>`:a.cls==='x'?`<span class="verdict x">${a.lab.filter((_,k)=>a.tags[k]==='x').join('·')} 피하기</span>`:'';
   const cells=a.fo.map((o,j)=>{const d=o-a.io[j];const mv=Math.abs(d)>=.005?`<div class="mv ${d<0?'dn':'up'}">${d<0?'▼':'▲'} ${a.io[j].toFixed(2)}</div>`:'<div class="mv"></div>';
     return `<div class="cell ${a.tags[j]}"><div class="sl">${a.lab[j]}</div><div class="od">${o.toFixed(2)}</div>${mv}<div class="vt">${a.V?'구매 '+Math.round(a.V[j]*100)+'%':''}</div></div>`}).join('');
   return `<div class="mrow ${extra} ${OPEN.has(g.s)?'open':''}" role="button" tabindex="0" aria-expanded="${OPEN.has(g.s)}" data-s="${g.s}" style="--k:${k}"><div class="mlab">${marketName(g)}${line}${vlab?'<div>'+vlab+'</div>':''}</div>${cells}<div class="det">${detHTML(x)}</div></div>`}
-function flowSVG(g,a){
+function lineHist(g,a){const fl=v=>`${a.isH&&v>0?'+':''}${v}`;const L=g.lh&&g.lh.length?g.lh:(g.il!=null&&g.il!==g.ln?[[null,g.il,g.ln]]:[]);if(!L.length)return '';
+  return `<div class="note" style="margin-bottom:6px"><b>기준점 변경 ${L.length}번</b>${L.map((c,i)=>`<div>${i+1}차${c[0]?` (${+c[0].slice(6,8)}일 ${c[0].slice(8,10)}:${c[0].slice(10,12)})`:''}: ${fl(c[1])} → <b>${fl(c[2])}</b></div>`).join('')}</div>`}
+function flowSVG(g,a){const lhh=(a.isH||a.isO)?lineHist(g,a):'';return lhh+flowSVG0(g,a,!!lhh)}
+function flowSVG0(g,a,hasLine){
   const pts=[a.io].concat((g.ch||[]).map(c=>a.three?[c[1],c[2],c[3]]:[c[1],c[3]]));
-  if(pts.length<2)return '<div class="note">배당 변경 없이 처음 배당 그대로예요.</div>';
+  if(pts.length<2)return `<div class="note">${hasLine?'배당 숫자는 처음 그대로예요 (기준점만 바뀜).':'배당 변경 없이 처음 배당 그대로예요.'}</div>`;
   const P=pts.map(p=>norm(p.map(x=>1/x)));
   const D=P.map(p=>p.map((v,j)=>v-P[0][j]));const W=300,H=90,pad=8,amp=Math.max(.01,...D.flat().map(Math.abs)),mn=-amp,rng=2*amp;
   const cols=a.three?['var(--felt)','var(--faint)','var(--brick)']:['var(--felt)','var(--brick)'];

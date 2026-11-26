@@ -19,11 +19,12 @@ async function buildSnapshot(post, now = Date.now()) {
     rounds.push(shape(r, yy * 10000 + n, st));
     if (st === 'SaleComplete' && rounds.length >= 1) break;
   }
-  return { updated: now, rounds };
+  return { updated: now, rounds, _tooltipKeys: buildSnapshot._tk || null };
 }
 function shape(r, gmTs, saleStatus) {
   const K = r.compSchedules.keys, ix = k => K.indexOf(k);
   const vote = {}; (r.voteStatus || []).forEach(v => vote[v.GM_SEQ] = [v.W_BET_CNT || 0, v.D_BET_CNT || 0, v.L_BET_CNT || 0]);
+  if (r.tooltipList && r.tooltipList[0]) buildSnapshot._tk = Object.keys(r.tooltipList[0]);
   const hist = {}; (r.tooltipList || []).slice().sort((a, b) => a.CHG_DTM < b.CHG_DTM ? -1 : 1).forEach(t => (hist[t.GM_SEQ] = hist[t.GM_SEQ] || []).push(t));
   const cl = r.currentLottery || {};
   const games = r.compSchedules.datas.filter(d => d[ix('winAllot')] > 0).map(d => {
@@ -38,6 +39,8 @@ function shape(r, gmTs, saleStatus) {
       i: first ? [first.BCHG_W_ODDS / 100, first.BCHG_D_ODDS / 100, first.BCHG_L_ODDS / 100] : null,
       c: (hist[seq] || []).length, // 변경 횟수: 배당만 바뀐 것 + 기준점만 바뀐 것 모두 (과거 데이터와 같은 기준)
       lc: H.length ? H[H.length - 1].CHG_DTM.slice(0, 12) : null,
+      // 기준점 변경 기록 [시각, 바뀌기 전, 바뀐 뒤] (배당 숫자는 그대로여도 기록)
+      lh: (hist[seq] || []).map(t => [String(t.CHG_DTM).slice(0, 12), t.BCHG_W_HANDI_RT, t.ACHG_W_HANDI_RT != null ? t.ACHG_W_HANDI_RT : t.ACHG_HANDI_RT]).filter(t => t[1] != null && t[2] != null && t[1] !== t[2]),
       ch: H.map(t => [t.CHG_DTM.slice(0, 12), t.ACHG_W_ODDS / 100, t.ACHG_D_ODDS / 100, t.ACHG_L_ODDS / 100]),
       v: vote[seq] || null, res: g('gameResult'), sc: g('mchScore')
     };
