@@ -167,11 +167,11 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   <div class="filters" id="filters">
     <button class="chip" data-sp="">전체</button><button class="chip" data-sp="축구">축구</button><button class="chip" data-sp="농구">농구</button><button class="chip" data-sp="야구">야구</button><button class="chip" data-sp="배구">배구</button>
     <span class="sep"></span>
-    <button class="chip" data-t="only">시트 결과 있는 경기</button><button class="chip" data-t="moved">배당 움직인 경기</button><button class="chip" data-t="past">끝난 경기 보기</button>
+    <button class="chip" data-t="only">시트 결과 있는 경기</button><button class="chip" data-t="moved">배당 움직인 경기</button><button class="chip" data-t="past">과거 결과 보기</button>
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
-  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-26 11:10 · 강함은 표본 8경기 이상만</div>
+  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-26 11:20 · 시작한 경기는 '과거 결과 보기'로</div>
     배트맨 공식 데이터를 받아와 시트 방식으로 자동 분석해요. 직전 회차까지의 일반+핸디 과거 경기에서 조건이 같은 경기를 찾고, 30경기 미만이면 <b>적음</b>을 붙여요. 시장 줄을 누르면 배당 흐름이 열려요.
   </div>
 </div>
@@ -247,14 +247,24 @@ function draw(){
   // 경기(같은 시각·홈·원정)별로 묶기
   const M=new Map();for(const x of rows){const k=x.g.t+'|'+x.g.h+'|'+x.g.a;if(!M.has(k))M.set(k,{t:x.g.t,h:x.g.h,a:x.g.a,lg:x.g.lg,sp:x.g.sp,list:[]});M.get(k).list.push(x)}
   let matches=[...M.values()].map(m=>{m.list.sort((p,q)=>MORDER(p.g)-MORDER(q.g));m.cls=m.list.some(x=>x.a.cls==='c')?'c':m.list.some(x=>x.a.cls==='w')?'w':m.list.some(x=>x.a.cls==='x')?'x':'';m.moved=m.list.some(x=>x.g.c>0);m.past=m.t<=now;const sc=m.list.find(x=>x.g.sc&&x.g.res!=null);m.score=sc?sc.g.sc:'';return m}).sort((p,q)=>p.t-q.t);
-  drawBrief(rows,R,now);
-  const vis=matches.filter(m=>(!F.sp||m.sp===F.sp)&&(!F.only||m.list.some(x=>Object.keys(SRES).some(k=>k.startsWith(x.g.s+':')&&SRES[k].n>0)))&&(!F.moved||m.moved)&&(F.past||!m.past));
-  let h='',lastSlot='';
+  if(F.past)document.getElementById('brief').innerHTML='';else drawBrief(rows,R,now);
+  const vis=matches.filter(m=>(!F.sp||m.sp===F.sp)&&(!F.only||m.list.some(x=>Object.keys(SRES).some(k=>k.startsWith(x.g.s+':')&&SRES[k].n>0)))&&(!F.moved||m.moved)&&(F.past?m.past:!m.past));
+  if(F.past)vis.sort((p,q)=>q.t-p.t);
+  let h=F.past?pastSummary(vis):'',lastSlot='';
   for(const m of vis){const slot=dayKey(m.t)+' '+hhmm(m.t);if(slot!==lastSlot){h+=`<div class="slot"><b>${hhmm(m.t)}</b><span>${dayKey(m.t)}${m.past?' · 시작함':''}</span></div>`;lastSlot=slot}
     h+=matchHTML(m)}
-  document.getElementById('list').innerHTML=h||'<div class="empty">조건에 맞는 경기가 없어요. 위쪽 필터를 바꿔 보세요.</div>';
+  document.getElementById('list').innerHTML=h||(F.past?'<div class="empty">아직 시작한 경기가 없어요.</div>':'<div class="empty">조건에 맞는 경기가 없어요. 위쪽 필터를 바꿔 보세요.</div>');
 }
 
+// ── 과거 결과 보기: 시작한 경기만 모아 보여주고, 끝난 시장의 결론이 맞았는지 판정별로 집계
+function pastSummary(ms){const T={};let pend=0;
+  for(const m of ms){const nrow=m.list.find(x=>/^(승무패|승패)$/.test(marketName(x.g)));if(!nrow)continue;
+    const Hs=m.list.filter(x=>/^(핸디캡|언더오버)$/.test(marketName(x.g))).map(x=>x.g);
+    for(const v of matchVerdicts(nrow.g,Hs)){if(v.pend){pend++;continue}if(v.none)continue;const rr=['0','1','2'].includes(String(v.g.res))?+v.g.res:-1;if(rr<0)continue;
+      const k=v.grade[0],t=T[k]||(T[k]={n:0,hit:0,exp:0,ret:0});const x=v.best.x,o=v.g.o,js=o[1]>0?[0,1,2]:[0,2],sm=js.reduce((a,q)=>a+1/o[q],0);
+      t.n++;t.exp+=1/o[x.j]/sm;if(rr===x.j){t.hit++;t.ret+=o[x.j]}}}
+  const row=k=>{const t=T[k];if(!t)return '';return `<div class="vrow"><span class="vm">${k}</span><span class="vb"><b>${t.hit}/${t.n} 맞음 (${(t.hit/t.n*100).toFixed(0)}%)</b><small>배당상 ${(t.exp/t.n*100).toFixed(0)}% · 결론대로 1씩 샀으면 수익 ${((t.ret/t.n-1)*100)>0?'+':''}${((t.ret/t.n-1)*100).toFixed(0)}%</small></span></div>`};
+  return `<div class="sbox concl" style="margin:0 0 14px"><div class="ph">과거 결과 <small>지금 회차에서 시작한 경기 ${ms.length}개 · 결과 나온 시장의 결론 적중</small></div>${['강함','보통','약함'].map(row).join('')||'<div class="none" style="font-size:12px">아직 결과가 나온 시장이 없어요.</div>'}${pend?'<div class="none" style="font-size:12px">분석 중인 시장이 있어요…</div>':''}</div>`}
 // ── 추천: 경기마다 기본 조건으로 자동 검색해서 결과별 '실제 비율 − 지금 배당 기대'를 계산
 // 최종 모드: ±0.06에서 5경기 미만이면 ±0.10, ±0.15로 넓힘. 무브 모드: 내재확률 ±3%p.
 // 추천도 ★★★ 두 모드 모두 같은 결과가 +10%p 이상이고 각각 10경기 이상 · ★★ 두 모드 모두 같은 방향(+) · ★ 한 모드만
