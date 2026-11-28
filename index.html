@@ -171,7 +171,7 @@ button:focus-visible,.mrow:focus-visible{outline:2px solid var(--felt);outline-o
   </div>
   <section class="brief" id="brief"></section>
   <div id="list"></div>
-  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-28 19:30 · 조합 확장: 칸별(승만·패만·무만) + 절삭 모양</div>
+  <div class="foot"><div style="font-size:11px;opacity:.7;margin-bottom:6px">화면 버전 2026-11-28 20:15 · 조합 확장(야구는 기존 조합 유지)</div>
     배트맨 공식 데이터를 받아와 시트 방식으로 자동 분석해요. 직전 회차까지의 일반+핸디 과거 경기에서 조건이 같은 경기를 찾고, 30경기 미만이면 <b>적음</b>을 붙여요. 시장 줄을 누르면 배당 흐름이 열려요.
   </div>
 </div>
@@ -358,9 +358,9 @@ function sheetCombos(n3,h3,hasV,forceL,moved){const out=[];
 // 조합 구성: 최종·초기 배당을 '승패 / 전부 / 승만 / 패만 / 무만'(칸별)으로 맞추고, 배당이 움직인 경기는 '절삭 모양'(내재확률 무브) 조합도
 const SLOT=(k,three)=>k==='all'?(three?[0,1,2]:[0,2]):k==='wl'?[0,2]:k==='w'?[0]:k==='l'?[2]:k==='d'?(three?[1]:[]):[];
 const SLAB={wl:'승패',all:'전부',w:'승만',l:'패만',d:'무만'};
-function finIniPairs(three,moved){const P=[['wl','wl']];if(three)P.push(['wl','all'],['all','wl'],['all','all']);
+function finIniPairs(three,moved,old){const P=[['wl','wl']];if(three)P.push(['wl','all'],['all','wl'],['all','all']);
   if(!moved){P.push(['wl','none']);if(three)P.push(['all','none'])}
-  for(const k of three?['w','l','d']:['w','l']){P.push([k,k]);if(!moved)P.push([k,'none'])}return P}
+  if(!old)for(const k of three?['w','l','d']:['w','l']){P.push([k,k]);if(!moved)P.push([k,'none'])}return P}
 const pctN=(o,three)=>{const js=three?[0,1,2]:[0,2],sm=js.reduce((a,j)=>a+1/o[j],0);return [0,1,2].map(j=>js.includes(j)?1/o[j]/sm*100:0)};
 function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0,isO=isOU(H),three=n3||h3;
   const Ni=N.i&&N.i[0]>1?N.i:N.o,Hi=H.i&&H.i[0]>1?H.i:H.o,hil=H.il!=null?H.il:H.ln,moved=(N.c||0)>0||(H.c||0)>0;
@@ -392,11 +392,13 @@ function sheetAll(rows,N,H,round){const e=0.1+1e-9,n3=N.o[1]>0,h3=H.o[1]>0,isO=i
   const tails=(base,head)=>{for(const chg of CH){const b1=chg==='none'?base:base.filter(f=>chg==='mv'?f.mv:f.cnt);for(const vote of VO){const b2=vote==='none'?b1:b1.filter(f=>f.vn&&(vote==='n'||f.vh));for(const hli of HL){const b3=hli?b2.filter(f=>f.hl):b2;
     push([...head,...tlab(chg,vote,hli)].filter(Boolean).join(' · '),b3.map(f=>f.x))}}}};
   // 배당 조건으로 먼저 거르고(36번), 그 안에서 변경·구매율·기준점 조건을 나눔
-  for(const [fin,ini] of finIniPairs(three,moved)){const fN=SLOT(fin,n3),fH=SLOT(fin,h3),iN=SLOT(ini,n3),iH=SLOT(ini,h3);let base=F;
+  // 야구는 과거 검증에서 기존 조합이 더 나아서 칸별·절삭 모양 조합을 쓰지 않음
+  const old=N.sp==='야구';
+  for(const [fin,ini] of finIniPairs(three,moved,old)){const fN=SLOT(fin,n3),fH=SLOT(fin,h3),iN=SLOT(ini,n3),iH=SLOT(ini,h3);let base=F;
     for(const tol of [0.1,0.06,0.03]){const T=tol+1e-9;base=base.filter(f=>fN.every(q=>f.nf[q]<=T)&&fH.every(q=>f.hf[q]<=T)&&iN.every(q=>f.ni[q]<=T)&&iH.every(q=>f.hi[q]<=T));
       tails(base,[`±${tol.toFixed(2)}`,'최종 '+SLAB[fin],ini!=='none'?'초기 '+SLAB[ini]:''])}}
   // 절삭 모양: 최종 내재확률 ±4%p 안에서, 초기→최종 무브(확률 변화)가 비슷한 경기
-  if(moved)for(const mt of [1.5,3])for(const k of three?['wl','all']:['wl']){const sN=SLOT(k,n3),sH=SLOT(k,h3);
+  if(moved&&!old)for(const mt of [1.5,3])for(const k of three?['wl','all']:['wl']){const sN=SLOT(k,n3),sH=SLOT(k,h3);
     tails(F.filter(f=>sN.every(q=>f.qn[q]<=4&&f.mn[q]<=mt)&&sH.every(q=>f.qh[q]<=4&&f.mh[q]<=mt)),[`절삭 모양 ±${mt}%p`,SLAB[k]])}
   const {sum,best}=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO));
   const sum1=sumOf(list,m=>m==='N'?NLAB(n3):HLAB(h3,isO),1).sum;
@@ -434,11 +436,11 @@ function singleAll(rows,G,round){const t3=G.o[1]>0,hasL=MKIND(G)!=='normal',line
   const tl=(chg,vote,li)=>[chg==='mv'?'변경 유무':chg==='cnt'?'변경 횟수':'',vote?'구매율':'',li?'초기 기준점':''];
   const tail=(x,chg,vote,li)=>(chg!=='mv'||(x.ch>0)===mv)&&(chg!=='cnt'||x.ch===(G.c||0))&&(!vote||js.every(j=>Math.abs(x.v[j]-V[j])<=vt))&&(!li||x.il===gil);
   const LI=hasL?(G.sp==='농구'?[1]:[0,1]):[0];
-  for(const tol of [0.03,0.06,0.1])for(const [fin,ini] of finIniPairs(t3,mv))for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of LI){
+  for(const tol of [0.03,0.06,0.1])for(const [fin,ini] of finIniPairs(t3,mv,G.sp==='야구'))for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of LI){
     const T=tol+1e-9,fj=SLOT(fin,t3),ij=SLOT(ini,t3);
     const out=pre.filter(x=>fj.every(j=>Math.abs(x.f[j]-G.o[j])<=T)&&ij.every(j=>Math.abs(x.i[j]-Gi[j])<=T)&&tail(x,chg,vote,li));
     list.push({lab:[`±${tol.toFixed(2)}`,'최종 '+SLAB[fin],ini!=='none'?'초기 '+SLAB[ini]:'',...tl(chg,vote,li)].filter(Boolean).join(' · '),n:out.length,N:side(out),H:[]})}
-  if(mv)for(const mt of [1.5,3])for(const k of t3?['wl','all']:['wl'])for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of LI){const sj=SLOT(k,t3);
+  if(mv&&G.sp!=='야구')for(const mt of [1.5,3])for(const k of t3?['wl','all']:['wl'])for(const chg of ['none','mv','cnt'])for(const vote of V?[0,1]:[0])for(const li of LI){const sj=SLOT(k,t3);
     const out=pre.filter(x=>{const pf=pctN(x.f,t3),pi=pctN(x.i[0]>1?x.i:x.f,t3);return sj.every(j=>Math.abs(pf[j]-gF[j])<=4&&Math.abs((pf[j]-pi[j])-(gF[j]-gI[j]))<=mt)&&tail(x,chg,vote,li)});
     list.push({lab:[`절삭 모양 ±${mt}%p`,SLAB[k],...tl(chg,vote,li)].filter(Boolean).join(' · '),n:out.length,N:side(out),H:[]})}
   const lab=MKIND(G)==='normal'?NLAB(t3):HLAB(t3,isOU(G));const {sum,best}=sumOf(list,()=>lab);
