@@ -28,6 +28,26 @@ function pairAnalysis(ti) {
     F.push({ x, fwl: Math.max(md(x.nf, G.nf, wl), md(x.hf, G.hf, wl)), fall: Math.max(md(x.nf, G.nf, n3 ? js3 : wl), md(x.hf, G.hf, h3 ? js3 : wl)), iwl: Math.max(md(x.ni, Ni, wl), md(x.hi, Hi, wl)), iall: Math.max(md(x.ni, Ni, n3 ? js3 : wl), md(x.hi, Hi, h3 ? js3 : wl)),
       mv: (x.nch > 0) === (G.nch > 0) && (x.hch > 0) === (G.hch > 0), cnt: x.nch === G.nch && x.hch === G.hch, vn: hasV && vok(x.nv) && (n3 ? js3 : wl).every(j => Math.abs(x.nv[j] - G.nv[j]) <= (n3 ? 10 : 7)), vh: hasV && vok(x.hv) && (h3 ? js3 : wl).every(j => Math.abs(x.hv[j] - G.hv[j]) <= (h3 ? 10 : 7)), hl: x.ihc === G.ihc }) }
   const pN = {}, pH = {};
+  if (process.env.EXP) { // 확장 조합: 칸별 + 절삭 모양 (페이지와 같음)
+    const pct = (o, t) => { const js = t ? js3 : wl, sm = js.reduce((a, j) => a + 1 / o[j], 0); return [0, 1, 2].map(j => js.includes(j) ? 1 / o[j] / sm * 100 : 0) };
+    const gNf = pct(G.nf, n3), gNi = pct(Ni, n3), gHf = pct(G.hf, h3), gHi = pct(Hi, h3);
+    const SL = (k, t) => k === 'all' ? (t ? js3 : wl) : k === 'wl' ? wl : k === 'w' ? [0] : k === 'l' ? [2] : k === 'd' ? (t ? [1] : []) : [];
+    const three = n3 || h3, P = [['wl', 'wl']]; if (three) P.push(['wl', 'all'], ['all', 'wl'], ['all', 'all']); if (!moved) { P.push(['wl', 'none']); if (three) P.push(['all', 'none']) }
+    for (const k of three ? ['w', 'l', 'd'] : ['w', 'l']) { P.push([k, k]); if (!moved) P.push([k, 'none']) }
+    const E = [];
+    for (let k = 0; k < ti; k++) { const x = pairs[k]; if (x.dt.slice(0, 8) >= day) break; if (x.ln !== G.ln || (x.nf[1] > 1) !== n3 || (x.hf[1] > 1) !== h3) continue;
+      const xNf = pct(x.nf, n3), xNi = pct(x.ni, n3), xHf = pct(x.hf, h3), xHi = pct(x.hi, h3);
+      const sn = [0, 1, 2].some(q => (q === 1 && !n3 ? false : Math.abs(x.nf[q] - G.nf[q]) <= e) && (q === 1 && !h3 ? true : Math.abs(x.hf[q] - G.hf[q]) <= e));
+      if (!sn && !(moved && Math.abs(xNf[0] - gNf[0]) <= 4 && Math.abs(xHf[0] - gHf[0]) <= 4)) continue;
+      const d = (a, b) => [0, 1, 2].map(q => Math.abs(a[q] - b[q]));
+      E.push({ x, nf: d(x.nf, G.nf), ni: d(x.ni, Ni), hf: d(x.hf, G.hf), hi: d(x.hi, Hi), qn: d(xNf, gNf), qh: d(xHf, gHf), mn: [0, 1, 2].map(q => Math.abs((xNf[q] - xNi[q]) - (gNf[q] - gNi[q]))), mh: [0, 1, 2].map(q => Math.abs((xHf[q] - xHi[q]) - (gHf[q] - gHi[q]))),
+        mv: (x.nch > 0) === (G.nch > 0) && (x.hch > 0) === (G.hch > 0), cnt: x.nch === G.nch && x.hch === G.hch, vn: hasV && vok(x.nv) && (n3 ? js3 : wl).every(j => Math.abs(x.nv[j] - G.nv[j]) <= (n3 ? 10 : 7)), vh: hasV && vok(x.hv) && (h3 ? js3 : wl).every(j => Math.abs(x.hv[j] - G.hv[j]) <= (h3 ? 10 : 7)), hl: x.ihc === G.ihc }) }
+    const tails = base => { for (const chg of ['none', 'mv', 'cnt']) { const b1 = chg === 'none' ? base : base.filter(f => chg === 'mv' ? f.mv : f.cnt); for (const vote of hasV ? ['none', 'n', 'nh'] : ['none']) { const b2 = vote === 'none' ? b1 : b1.filter(f => f.vn && (vote === 'n' || f.vh)); for (const hli of BK ? [1] : [0, 1]) { const m = (hli ? b2.filter(f => f.hl) : b2).map(f => f.x); addCombo(pN, m, n3 ? js3 : wl, 'nf', 'r1'); addCombo(pH, m, h3 ? js3 : wl, 'hf', 'r2') } } } };
+    for (const [fin, ini] of P) { const fN = SL(fin, n3), fH = SL(fin, h3), iN = SL(ini, n3), iH = SL(ini, h3); let base = E;
+      for (const tol of [0.1, 0.06, 0.03]) { const T = tol + 1e-9; base = base.filter(f => fN.every(q => f.nf[q] <= T) && fH.every(q => f.hf[q] <= T) && iN.every(q => f.ni[q] <= T) && iH.every(q => f.hi[q] <= T)); tails(base) } }
+    if (moved) for (const mt of [1.5, 3]) for (const k of three ? ['wl', 'all'] : ['wl']) { const sN = SL(k, n3), sH = SL(k, h3); tails(E.filter(f => sN.every(q => f.qn[q] <= 4 && f.mn[q] <= mt) && sH.every(q => f.qh[q] <= 4 && f.mh[q] <= mt))) }
+    return { N: summarize(pN), H: summarize(pH) }
+  }
   for (const ti2 of [0, 1, 2]) for (const fin of (n3 || h3) ? ['wl', 'all'] : ['wl']) for (const ini of moved ? ((n3 || h3) ? ['wl', 'all'] : ['wl']) : ((n3 || h3) ? ['none', 'wl', 'all'] : ['none', 'wl'])) for (const chg of ['none', 'mv', 'cnt']) for (const vote of hasV ? ['none', 'n', 'nh'] : ['none']) for (const hli of BK ? [1] : [0, 1]) {
     const T = TOLS[ti2] + 1e-9, m = F.filter(f => (fin === 'wl' ? f.fwl : f.fall) <= T && (ini === 'none' || (ini === 'wl' ? f.iwl : f.iall) <= T) && (chg !== 'mv' || f.mv) && (chg !== 'cnt' || f.cnt) && (vote === 'none' || (f.vn && (vote === 'n' || f.vh))) && (!hli || f.hl)).map(f => f.x);
     addCombo(pN, m, n3 ? js3 : wl, 'nf', 'r1'); addCombo(pH, m, h3 ? js3 : wl, 'hf', 'r2') }
@@ -67,6 +87,6 @@ for (let ti = start; ti < pairs.length; ti++) {
     rec('C 같은 무게', mk, fin(verdict(mk === '일반' ? [P.N, SN] : [P.H, SH])), odds, res);
   }
 }
-fs.writeFileSync(`/tmp/pol_${sp}.json`, JSON.stringify({ tested, ST, OB }));
+fs.writeFileSync(`/tmp/pol_${sp}${process.env.EXP ? '_exp' : ''}.json`, JSON.stringify({ tested, ST, OB }));
 console.log(sp, '시험 경기', tested, ((Date.now() - t0) / 1000).toFixed(0) + 's');
 for (const k of Object.keys(ST).sort()) { const s = ST[k]; console.log(k.padEnd(22), String(s.n).padStart(6), '적중', (s.hit / s.n * 100).toFixed(1) + '%', '배당상', (s.exp / s.n * 100).toFixed(1) + '%', '차이', ((s.hit - s.exp) / s.n * 100).toFixed(1) + '%p', '수익', ((s.ret / s.n - 1) * 100).toFixed(1) + '%', '±' + (196 * Math.sqrt(.25 / s.n)).toFixed(1)) }
