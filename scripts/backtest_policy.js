@@ -66,7 +66,7 @@ function singleAnalysis(A, Gm, isLine) {
   return summarize(per)
 }
 // 판정 (페이지와 같은 규칙)
-const GRADE = b => { const sh = b.pos / b.tot; return sh >= 0.95 && b.wres >= 15 ? 2 : sh >= 0.8 && b.wres >= 8 ? 1 : 0 };
+let TH = 0.95; const GRADE = b => { const sh = b.pos / b.tot; return sh >= TH && b.wres >= 15 ? 2 : sh >= 0.8 && b.wres >= 8 ? 1 : 0 };
 function verdict(sums) { let best = null; for (const S of sums) for (const j in S) { const x = S[j]; if (x.wres <= 0 || x.pos / x.tot < 0.7) continue; const sc = x.wres * x.med / (x.med + 30); if (!best || sc > best.sc) best = { x, sc } } return best ? { j: best.x.j, g: GRADE(best.x) === 2 && best.x.max < 8 ? 1 : GRADE(best.x), wres: best.x.wres, max: best.x.max } : null }
 function combine(m, b) { const rm = m ? m.g : -1, rb = b ? b.g - 1 : -2; if (!m && !b) return null; if (m && b && m.j === b.j) return { j: m.j, g: Math.max(rm, rb), wres: m.wres }; if (!b || rm >= rb) return m; if (rb < 0) return m; return { j: b.j, g: rb, wres: b.wres } }
 const fin = v => v && !(v.g === 0 && v.wres < 3) ? v : null;
@@ -81,6 +81,9 @@ for (let ti = start; ti < pairs.length; ti++) {
   const SH = singleAnalysis(G.hf[1] > 1 ? AH3 : AH2, { dt: G.dt, i: G.hi, f: G.hf, ch: G.hch, v: G.hv, ln: G.ln, il: G.ihc }, true);
   tested++;
   const pn = verdict([P.N]), sn = verdict([SN]), ph = verdict([P.H]), sh = verdict([SH]);
+  for (const th of [0.95, 0.9, 0.85]) { TH = th; const pn2 = verdict([P.N]), sn2 = verdict([SN]), ph2 = verdict([P.H]), sh2 = verdict([SH]);
+    for (const [mk, pv, sv, odds, res] of [['일반', pn2, sn2, G.nf, G.r1], ['핸디', ph2, sh2, G.hf, G.r2]]) rec('TH' + th, mk, fin(combine(pv, sv)), odds, res) }
+  TH = 0.95;
   for (const [mk, pv, sv, odds, res] of [['일반', pn, sn, G.nf, G.r1], ['핸디', ph, sh, G.hf, G.r2]]) {
     rec('A 짝 메인', mk, fin(combine(pv, sv)), odds, res); rec2(mk, fin(combine(pv, sv)), odds, res);
     rec('B 단독 메인', mk, fin(combine(sv, pv)), odds, res);
